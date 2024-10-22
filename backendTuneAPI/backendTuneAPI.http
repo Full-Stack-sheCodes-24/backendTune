@@ -1,6 +1,0 @@
-@backendTuneAPI_HostAddress = http://localhost:5167
-
-GET {{backendTuneAPI_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
