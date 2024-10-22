@@ -18,7 +18,7 @@ namespace backendTuneAPI.Controllers
         [HttpGet]
         public JsonResult Get()
         {
-            MongoClient dbClient = new MongoClient(_configuration.GetConnectionString("BackendTuneCon"));
+            MongoClient dbClient = new MongoClient(_configuration["MongoDBAtlas:ConnectionString"]);
 
             var dbList = dbClient.GetDatabase("testdb").GetCollection<Users>("users").AsQueryable();
 
