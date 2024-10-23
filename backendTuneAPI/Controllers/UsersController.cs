@@ -2,61 +2,60 @@
 using Microsoft.AspNetCore.Mvc;
 using MoodzApi.Services;
 
-namespace MoodzApi.Controllers
+namespace MoodzApi.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class UsersController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class UsersController : ControllerBase
+    private readonly UsersService _usersService;
+    public UsersController(UsersService usersService) =>
+        _usersService = usersService;
+
+    [HttpGet]
+    public async Task<List<User>> Get() =>
+        await _usersService.GetAsync();
+
+    [HttpGet("{id:length(24)}")]
+    public async Task<ActionResult<User>> Get(string id)
     {
-        private readonly UsersService _usersService;
-        public UsersController(UsersService usersService) =>
-            _usersService = usersService;
+        var user = await _usersService.GetAsync(id);
 
-        [HttpGet]
-        public async Task<List<User>> Get() =>
-            await _usersService.GetAsync();
+        if (user is null) return NotFound();
 
-        [HttpGet("{id:length(24)}")]
-        public async Task<ActionResult<User>> Get(string id)
-        {
-            var user = await _usersService.GetAsync(id);
+        return user;
+    }
 
-            if (user is null) return NotFound();
+    [HttpPost]
+    public async Task<IActionResult> Post(User newUser)
+    {
+        await _usersService.CreateAsync(newUser);
 
-            return user;
-        }
+        return CreatedAtAction(nameof(Get), new { id = newUser.Id }, newUser);
+    }
 
-        [HttpPost]
-        public async Task<IActionResult> Post(User newUser)
-        {
-            await _usersService.CreateAsync(newUser);
+    [HttpPut("{id:length(24)}")]
+    public async Task<IActionResult> Update(string id, User updatedUser)
+    {
+        var user = await _usersService.GetAsync(id);
 
-            return CreatedAtAction(nameof(Get), new { id = newUser.Id }, newUser);
-        }
+        if (user is null) return NotFound();
 
-        [HttpPut("{id:length(24)}")]
-        public async Task<IActionResult> Update(string id, User updatedUser)
-        {
-            var user = await _usersService.GetAsync(id);
+        updatedUser.Id = user.Id;
 
-            if (user is null) return NotFound();
+        await _usersService.UpdateAsync(id, updatedUser);
 
-            updatedUser.Id = user.Id;
+        return NoContent();
+    }
 
-            await _usersService.UpdateAsync(id, updatedUser);
+    [HttpDelete("{id:length(24)}")]
+    public async Task<IActionResult> Delete(string id) {
+        var book = await _usersService.GetAsync(id);
 
-            return NoContent();
-        }
+        if (book is null) return NotFound();
 
-        [HttpDelete("{id:length(24)}")]
-        public async Task<IActionResult> Delete(string id) {
-            var book = await _usersService.GetAsync(id);
+        await _usersService.RemoveAsync(id);
 
-            if (book is null) return NotFound();
-
-            await _usersService.RemoveAsync(id);
-
-            return NoContent();
-        }
+        return NoContent();
     }
 }
