@@ -12,8 +12,10 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Serialization;
 using Microsoft.Extensions.FileProviders;
 using System.IO;
+using MoodzApi.Models;
+using MoodzApi.Services;
 
-namespace backendTuneAPI
+namespace MoodzApi
 {
     public class Startup
     {
@@ -35,7 +37,12 @@ namespace backendTuneAPI
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
 
+            //Initialize settings Models w/ secrets.json 
+            services.Configure<UserDatabaseSettings>(
+                Configuration.GetSection("MongoDBAtlas"));
 
+            //Initializes connection to MongoDBAtlas only ONCE! This single connection can now be used as a dependency injection across the whole app
+            services.AddSingleton<UsersService>();
 
             //JSON Serializer
             services.AddControllersWithViews().AddNewtonsoftJson(options =>
@@ -43,7 +50,9 @@ namespace backendTuneAPI
                 .AddNewtonsoftJson(options => options.SerializerSettings.ContractResolver
                 = new DefaultContractResolver());
 
-            services.AddControllers();
+            services.AddControllers()
+                .AddJsonOptions(    //prevents json field naming conventions from being converted to a different naming convention.
+                    options => options.JsonSerializerOptions.PropertyNamingPolicy = null);
         }
 
 

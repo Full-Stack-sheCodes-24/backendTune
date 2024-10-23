@@ -1,28 +1,62 @@
-﻿using backendTuneAPI.Models;
-using Microsoft.AspNetCore.Http;
+﻿using MoodzApi.Models;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Driver;
+using MoodzApi.Services;
 
-namespace backendTuneAPI.Controllers
+namespace MoodzApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     public class UsersController : ControllerBase
     {
-        private readonly IConfiguration _configuration;
-        public UsersController(IConfiguration configuration)
-        {
-            _configuration = configuration;
-        }
+        private readonly UsersService _usersService;
+        public UsersController(UsersService usersService) =>
+            _usersService = usersService;
 
         [HttpGet]
-        public JsonResult Get()
+        public async Task<List<User>> Get() =>
+            await _usersService.GetAsync();
+
+        [HttpGet("{id:length(24)}")]
+        public async Task<ActionResult<User>> Get(string id)
         {
-            MongoClient dbClient = new MongoClient(_configuration["MongoDBAtlas:ConnectionString"]);
+            var user = await _usersService.GetAsync(id);
 
-            var dbList = dbClient.GetDatabase("testdb").GetCollection<Users>("users").AsQueryable();
+            if (user is null) return NotFound();
 
-            return new JsonResult(dbList);
+            return user;
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Post(User newUser)
+        {
+            await _usersService.CreateAsync(newUser);
+
+            return CreatedAtAction(nameof(Get), new { id = newUser.Id }, newUser);
+        }
+
+        [HttpPut("{id:length(24)}")]
+        public async Task<IActionResult> Update(string id, User updatedUser)
+        {
+            var user = await _usersService.GetAsync(id);
+
+            if (user is null) return NotFound();
+
+            updatedUser.Id = user.Id;
+
+            await _usersService.UpdateAsync(id, updatedUser);
+
+            return NoContent();
+        }
+
+        [HttpDelete("{id:length(24)}")]
+        public async Task<IActionResult> Delete(string id) {
+            var book = await _usersService.GetAsync(id);
+
+            if (book is null) return NotFound();
+
+            await _usersService.RemoveAsync(id);
+
+            return NoContent();
         }
     }
 }
