@@ -50,7 +50,8 @@ public class SpotifyService
         if (_accessToken.IsExpired()) _accessToken = GetAccessToken().Result;
     }
 
-    public async Task<string> SearchTracks(string query) {
+    public async Task<string> SearchTracks(string query)
+    {
         CheckAccessToken();
 
         // Encode the query to handle special characters
