@@ -41,8 +41,13 @@ namespace MoodzApi
             services.Configure<UserDatabaseSettings>(
                 Configuration.GetSection("MongoDBAtlas"));
 
+            services.Configure<SpotifyAuthSettings>(
+                Configuration.GetSection("SpotifyAuth"));
+
             //Initializes connection to MongoDBAtlas only ONCE! This single connection can now be used as a dependency injection across the whole app
             services.AddSingleton<UsersService>();
+            services.AddSingleton<SpotifyService>();    //Spotify service keeps track of when we need to update auth token
+
 
             //JSON Serializer
             services.AddControllersWithViews().AddNewtonsoftJson(options =>
