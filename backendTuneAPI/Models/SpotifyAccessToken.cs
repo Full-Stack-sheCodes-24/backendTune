@@ -1,7 +1,8 @@
 ﻿using Newtonsoft.Json;
 
 namespace MoodzApi.Models;
-public class SpotifyAccessToken {
+public class SpotifyAccessToken
+{
     [JsonProperty("access_token")]
     public string AccessToken { get; set; } = null!;
 
@@ -18,7 +19,8 @@ public class SpotifyAccessToken {
     {
         Expiration = DateTime.UtcNow.AddSeconds(ExpiresIn);
     }
-    public bool IsExpired() {
+    public bool IsExpired()
+    {
         if (AccessToken == null) return true; // No token available, considered expired
 
         return DateTime.UtcNow >= Expiration;
