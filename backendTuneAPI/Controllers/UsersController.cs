@@ -1,6 +1,8 @@
 ﻿using MoodzApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using MoodzApi.Services;
+using MoodzApi.Mappers;
+using System.Text.RegularExpressions;
 
 namespace MoodzApi.Controllers;
 
@@ -9,8 +11,13 @@ namespace MoodzApi.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly UsersService _usersService;
-    public UsersController(UsersService usersService) =>
+    private readonly UserMapper _userMapper;
+    private const string EMAIL_RE = @"\A(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)\Z";
+    public UsersController(UsersService usersService)
+    {
         _usersService = usersService;
+        _userMapper = new UserMapper(); // Note: should try to update DI Injection Container to all Mappers to be singletons, but this is fine for now
+    }
 
     [HttpGet]
     public async Task<List<User>> Get() =>
@@ -27,35 +34,40 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Post(User newUser)
+    public async Task<IActionResult> Post(UserCreateRequest request)
     {
-        await _usersService.CreateAsync(newUser);
+        if (!Regex.IsMatch(request.Email, EMAIL_RE)) return BadRequest($"{request.Email} is not a valid email");
 
-        return CreatedAtAction(nameof(Get), new { id = newUser.Id }, newUser);
+        var createdUser = await _usersService.CreateAsync(_userMapper.UserCreateRequestToUser(request));
+        if (createdUser?.Id is null) return NoContent();
+
+        return CreatedAtAction(nameof(Get), new { id = createdUser.Id }, createdUser);  // Returns a response header with key value pair: "location": "base_url/api/Users/createdUser.Id"
     }
 
-    [HttpPut("{id:length(24)}")]
-    public async Task<IActionResult> Update(string id, User updatedUser)
+    [HttpPut]
+    public async Task<IActionResult> Update(User updatedUser)
     {
-        var user = await _usersService.GetAsync(id);
+        if (updatedUser.Id is null) return BadRequest("Id is null");
+        if (updatedUser.Email is not null && !Regex.IsMatch(updatedUser.Email, EMAIL_RE)) return BadRequest($"{updatedUser.Email} is not a valid email");
 
+        var user = await _usersService.GetAsync(updatedUser.Id);
         if (user is null) return NotFound();
 
-        updatedUser.Id = user.Id;
+        var result = await _usersService.UpdateAsync(updatedUser);
+        if (result is false) return NoContent();
 
-        await _usersService.UpdateAsync(id, updatedUser);
-
-        return NoContent();
+        return CreatedAtAction(nameof(Get), new { id = updatedUser.Id }, updatedUser);
     }
 
     [HttpDelete("{id:length(24)}")]
     public async Task<IActionResult> Delete(string id) {
-        var book = await _usersService.GetAsync(id);
+        var user = await _usersService.GetAsync(id);
 
-        if (book is null) return NotFound();
+        if (user is null) return NotFound();
 
-        await _usersService.RemoveAsync(id);
+        var result = await _usersService.RemoveAsync(id);
+        if (result is false) return NoContent();
 
-        return NoContent();
+        return Ok();
     }
 }
