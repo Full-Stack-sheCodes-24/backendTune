@@ -40,4 +40,45 @@ public class UsersService
         var result = await _usersCollection.DeleteOneAsync(x => x.Id == id);
         return result.IsAcknowledged;
     }
+
+    public async Task<Entry[]> GetEntriesByUserIdAsync(string id)
+    {
+        // Find the user by ID
+        var user = await _usersCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
+
+        // If the user does not exist or has no entries, return an empty list
+        return user?.Entries ?? Array.Empty<Entry>();
+    }
+
+    public async Task<bool> AddEntryToUserAsync(string id, Entry newEntry)
+    {
+        // Find the user and update the Entries array by adding the new entry
+        var updateResult = await _usersCollection.UpdateOneAsync(
+            x => x.Id == id,
+            Builders<User>.Update.Push(x => x.Entries, newEntry)
+        );
+
+        // Return true if the update was successful, false otherwise
+        return updateResult.ModifiedCount > 0;
+    }
+
+    public async Task<bool> DeleteEntryByDateAsync(string id, string date)
+    {
+        // Define the filter to match the specific entry by date string
+        var filter = Builders<User>.Filter.And(
+            Builders<User>.Filter.Eq(x => x.Id, id),
+            Builders<User>.Filter.ElemMatch(x => x.Entries, entry => entry.Date == date)
+        );
+
+        // Define the update to remove the entry with the specified date
+        var update = Builders<User>.Update.PullFilter(x => x.Entries, entry => entry.Date == date);
+
+        // Perform the update
+        var updateResult = await _usersCollection.UpdateOneAsync(filter, update);
+
+        // Return true if an entry was deleted, false otherwise
+        return updateResult.ModifiedCount > 0;
+    }
+
+
 }
