@@ -72,7 +72,7 @@ public class UsersController : ControllerBase
     }
     
     [HttpGet("{id:length(24)}/entries")]
-    public async Task<ActionResult<Entry[]>> GetEntries(string id)
+    public async Task<ActionResult<UserEntries[]>> GetEntries(string id)
     {
         // Fetch all entries for the specified userId
         var entries = await _usersService.GetEntriesByUserIdAsync(id);
@@ -88,7 +88,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("{id:length(24)}/entries")]
-    public async Task<ActionResult> AddEntry(string id, Entry newEntry)
+    public async Task<ActionResult> AddEntry(string id, UserEntries newEntry)
     {
         // Call the service method to add the entry
         var success = await _usersService.AddEntryToUserAsync(id, newEntry);

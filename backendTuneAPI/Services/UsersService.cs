@@ -41,16 +41,16 @@ public class UsersService
         return result.IsAcknowledged;
     }
 
-    public async Task<Entry[]> GetEntriesByUserIdAsync(string id)
+    public async Task<UserEntries[]> GetEntriesByUserIdAsync(string id)
     {
         // Find the user by ID
         var user = await _usersCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
 
         // If the user does not exist or has no entries, return an empty list
-        return user?.Entries ?? Array.Empty<Entry>();
+        return user?.Entries ?? Array.Empty<UserEntries>();
     }
 
-    public async Task<bool> AddEntryToUserAsync(string id, Entry newEntry)
+    public async Task<bool> AddEntryToUserAsync(string id, UserEntries newEntry)
     {
         // Find the user and update the Entries array by adding the new entry
         var updateResult = await _usersCollection.UpdateOneAsync(
