@@ -77,6 +77,6 @@ public class SpotifyService
 
     public async Task<bool> StoreAuthCodeAsync(string code, string userId)
     {
-        return await _usersService.AddUserCodeAsync(userId, code);
+        return await _usersService.AddUserAuthCodeAsync(userId, code);
     }
 }

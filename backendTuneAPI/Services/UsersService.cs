@@ -79,6 +79,8 @@ public class UsersService
         // Return true if an entry was deleted, false otherwise
         return updateResult.ModifiedCount > 0;
     }
+
+    //builder function if wanted
     /*
     public async Task<bool> AddUserCodeAsync(string userId, string code)
     {
@@ -95,7 +97,7 @@ public class UsersService
         return result.ModifiedCount > 0;
     }*/
 
-    public async Task<bool> AddUserCodeAsync(string userId, string code)
+    public async Task<bool> AddUserAuthCodeAsync(string userId, string code)
     {
         // Find the user by ID
         var user = await _usersCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
@@ -113,6 +115,4 @@ public class UsersService
         // Return true if the update was successful
         return result.IsAcknowledged && result.ModifiedCount > 0;
     }
-
-
 }
