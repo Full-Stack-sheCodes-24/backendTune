@@ -70,4 +70,56 @@ public class UsersController : ControllerBase
 
         return Ok();
     }
+    
+    [HttpGet("{id:length(24)}/entries")]
+    public async Task<ActionResult<UserEntries[]>> GetEntries(string id)
+    {
+        // Fetch all entries for the specified userId
+        var entries = await _usersService.GetEntriesByUserIdAsync(id);
+
+        // If the user has no entries, you can choose to return a 404 or an empty list with 200 OK
+        if (entries == null)
+        {
+            return NotFound();
+        }
+
+        // Return the list of entries with a 200 OK status
+        return Ok(entries);
+    }
+
+    [HttpPost("{id:length(24)}/entries")]
+    public async Task<ActionResult> AddEntry(string id, UserEntries newEntry)
+    {
+        // Call the service method to add the entry
+        var success = await _usersService.AddEntryToUserAsync(id, newEntry);
+
+        // If the entry was added successfully, return 201 Created
+        if (success)
+        {
+            return CreatedAtAction(nameof(GetEntries), new { id = id }, newEntry);
+        }
+
+        // If the user was not found or the entry was not added, return 404 Not Found
+        return NotFound();
+    }
+
+    [HttpDelete("{id:length(24)}/entries/{date}")]
+    public async Task<ActionResult> DeleteEntry(string id, string date)
+    {
+        // Call the service method to delete the entry
+        var success = await _usersService.DeleteEntryByDateAsync(id, date);
+
+        // Return 204 No Content if the entry was deleted
+        if (success)
+        {
+            return NoContent();
+        }
+
+        // If the user or entry was not found, return 404 Not Found
+        return NotFound();
+    }
+
+
+
+
 }
