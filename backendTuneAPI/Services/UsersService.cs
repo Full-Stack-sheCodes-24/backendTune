@@ -79,6 +79,40 @@ public class UsersService
         // Return true if an entry was deleted, false otherwise
         return updateResult.ModifiedCount > 0;
     }
+    /*
+    public async Task<bool> AddUserCodeAsync(string userId, string code)
+    {
+        // Define the filter to locate the user by ID
+        var filter = Builders<User>.Filter.Eq(x => x.Id, userId);
+
+        // Define the update to set the Code field
+        var update = Builders<User>.Update.Set(x => x.SpotifyAuthenticationCode, code);
+
+        // Execute the update operation
+        var result = await _usersCollection.UpdateOneAsync(filter, update);
+
+        // Return true if the update was successful
+        return result.ModifiedCount > 0;
+    }*/
+
+    public async Task<bool> AddUserCodeAsync(string userId, string code)
+    {
+        // Find the user by ID
+        var user = await _usersCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
+
+        // If the user is not found, return false
+        if (user == null)
+            return false;
+
+        // Update the Code field in the user object
+        user.SpotifyAuthenticationCode = code;
+
+        // Replace the existing document with the updated user document
+        var result = await _usersCollection.ReplaceOneAsync(x => x.Id == userId, user);
+
+        // Return true if the update was successful
+        return result.IsAcknowledged && result.ModifiedCount > 0;
+    }
 
 
 }
