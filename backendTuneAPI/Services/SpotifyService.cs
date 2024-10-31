@@ -11,14 +11,17 @@ public class SpotifyService
     private readonly string _clientId;
     private readonly string _clientSecret;
     private readonly HttpClient _httpClient;
+    private readonly UsersService _usersService;
 
-    public SpotifyService(IOptions<SpotifyAuthSettings> spotifyAuthSettings)
+    public SpotifyService(IOptions<SpotifyAuthSettings> spotifyAuthSettings, UsersService usersService)
     {
         _httpClient = new HttpClient();
         _clientId = spotifyAuthSettings.Value.ClientId;
         _clientSecret = spotifyAuthSettings.Value.ClientSecret;
         _accessToken = new SpotifyAccessToken();
+        _usersService = usersService;
     }
+
 
     //Returns a new access token from spotify auth api
     private async Task<SpotifyAccessToken> GetAccessToken()
@@ -69,5 +72,11 @@ public class SpotifyService
         } else {
             throw new Exception($"Error searching tracks: {response.StatusCode} - {response.ReasonPhrase}");
         }
+    }
+
+
+    public async Task<bool> StoreAuthCodeAsync(string code, string userId)
+    {
+        return await _usersService.AddUserAuthCodeAsync(userId, code);
     }
 }

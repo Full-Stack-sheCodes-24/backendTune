@@ -25,15 +25,18 @@ public class SpotifyController : ControllerBase
     }
 
     // post api endpoint
-
     [HttpPost("{id:length(24)}/authcode")]
-    public async Task<IActionResult> PostUserCode(string code, string userId)
+    public async Task<IActionResult> PostUserCode(string code, string id)
     {
-        bool result = await _spotifyService.StoreAuthCodeAsync(code, userId);
+        bool result = await _spotifyService.StoreAuthCodeAsync(code, id);
 
-        return result;
+        if (result)
+        {
+            return Ok(result);
+        }
+        else
+        {
+            return NotFound();
+        }
     }
-
-
-
 }
