@@ -115,4 +115,29 @@ public class UsersService
         // Return true if the update was successful
         return result.IsAcknowledged && result.ModifiedCount > 0;
     }
+
+    public async Task<bool> UpdateSpotifyAccessToken(string userId, SpotifyAccessToken token) {
+        // Find the user by ID
+        var user = await _usersCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
+
+        // If the user is not found, return false
+        if (user == null)
+            return false;
+
+        // Update the Code field in the user object
+        user.SpotifyAccessToken = token;
+
+        // Replace the existing document with the updated user document
+        var result = await _usersCollection.ReplaceOneAsync(x => x.Id == userId, user);
+
+        // Return true if the update was successful
+        return result.IsAcknowledged && result.ModifiedCount > 0;
+    }
+
+    public async Task<string> GetSpotifyAuthorizationCode(string userId) {
+        // Find the user by ID
+        var user = await _usersCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
+        return user.SpotifyAuthenticationCode;
+    }
+
 }

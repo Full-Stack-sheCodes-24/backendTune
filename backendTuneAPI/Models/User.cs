@@ -11,4 +11,6 @@ public class User
     public string Name { get; set; } = null!;
     public UserEntries[] Entries { get; set; } = null!;
     public string SpotifyAuthenticationCode { get; set; } = null!;
+
+    public SpotifyAccessToken SpotifyAccessToken { get; set; } = null!;
 }
