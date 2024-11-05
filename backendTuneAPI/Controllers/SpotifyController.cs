@@ -41,25 +41,25 @@ public class SpotifyController : ControllerBase
         }
     }
 
-    // This is just to test that the token is updated in the user doc, rn GetUserAccessToken is public but it should be private later
-    [HttpPost("{id:length(24)}/token")]
-    public async Task<IActionResult> PostUserToken(string userId)
-    {
-        try
-    {
-        // Call the GetUserAccessToken method in your service
-        var accessToken = await _spotifyService.GetUserAccessToken(userId);
+    // This is just to test that the token is updated in the user doc,
+    // [HttpPost("{id:length(24)}/token")]
+    // public async Task<IActionResult> PostUserToken(string userId)
+    // {
+    //     try
+    // {
+    //     // Call the GetUserAccessToken method in your service
+    //     var accessToken = await _spotifyService.CheckUserAccessToken(userId);
 
-        // Return the access token as part of the response for testing purposes
-        return Ok(new { AccessToken = accessToken.AccessToken, Expiration = accessToken.Expiration });
-    }
-    catch (Exception ex)
-    {
-        // Return any errors encountered during the process
-        return StatusCode(500, $"Error retrieving access token: {ex.Message}");
-    }
+    //     // Return the access token as part of the response for testing purposes
+    //     return Ok(new { AccessToken = accessToken.AccessToken, Expiration = accessToken.Expiration });
+    // }
+    // catch (Exception ex)
+    // {
+    //     // Return any errors encountered during the process
+    //     return StatusCode(500, $"Error retrieving access token: {ex.Message}");
+    // }
         
-    }
+    // }
 
     //get api endpoint to request most recently played tracks
     [HttpGet("recently-played/{userId}")]

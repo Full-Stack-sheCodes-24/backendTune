@@ -13,4 +13,6 @@ public class User
     public string SpotifyAuthenticationCode { get; set; } = null!;
 
     public SpotifyAccessToken SpotifyAccessToken { get; set; } = null!;
+
+    public string RefreshToken { get; set; } = null!;
 }

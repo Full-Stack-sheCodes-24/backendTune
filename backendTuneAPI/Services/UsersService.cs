@@ -127,6 +127,9 @@ public class UsersService
         // Update the Code field in the user object
         user.SpotifyAccessToken = token;
 
+        // adds refresh token string
+        user.RefreshToken = token.RefreshToken;
+
         // Replace the existing document with the updated user document
         var result = await _usersCollection.ReplaceOneAsync(x => x.Id == userId, user);
 
@@ -138,6 +141,12 @@ public class UsersService
         // Find the user by ID
         var user = await _usersCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
         return user.SpotifyAuthenticationCode;
+    }
+
+    public async Task<SpotifyAccessToken> GetSpotifyAccessToken(string userId) {
+        // Find the user by ID
+        var user = await _usersCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
+        return user.SpotifyAccessToken;
     }
 
 }

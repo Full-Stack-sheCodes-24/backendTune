@@ -14,15 +14,12 @@ public class SpotifyService
     private readonly HttpClient _httpClient;
     private readonly UsersService _usersService;
 
-    private SpotifyAccessToken _userAccessToken;
-
     public SpotifyService(IOptions<SpotifyAuthSettings> spotifyAuthSettings, UsersService usersService)
     {
         _httpClient = new HttpClient();
         _clientId = spotifyAuthSettings.Value.ClientId;
         _clientSecret = spotifyAuthSettings.Value.ClientSecret;
         _accessToken = new SpotifyAccessToken();
-        _userAccessToken = new SpotifyAccessToken();
         _usersService = usersService;
     }
 
@@ -85,7 +82,7 @@ public class SpotifyService
     }
 
     // User access token swapping
-    public async Task<SpotifyAccessToken> GetUserAccessToken(string userId) {
+    private async Task<SpotifyAccessToken> GetUserAccessToken(string userId) {
 
         // POST request to /api/token endpoint
         string code = await _usersService.GetSpotifyAuthorizationCode(userId);
@@ -130,19 +127,61 @@ public class SpotifyService
     }
 
     // Will be used in API calls
-    private void CheckUserAccessToken(string userId) {
-        // Where _userAccessToken is declared if the old one is expired
-        if (_userAccessToken.IsExpired()) _userAccessToken = GetUserAccessToken(userId).Result;
+    private async void CheckUserAccessToken(string userId) {
+        SpotifyAccessToken userToken = await _usersService.GetSpotifyAccessToken(userId);
+        if (userToken == null) {
+             await GetUserAccessToken(userId);
+        }
+        else {
+            if (userToken.IsExpired()) {
+             await RefreshAccessToken(userId, userToken);
+            }
+        }
+    }
+
+    // Called when userToken is expired, returns a new access token
+    private async Task<SpotifyAccessToken> RefreshAccessToken(string userId, SpotifyAccessToken userToken) {
+
+        string refresh_token = userToken.RefreshToken; //gets refresh token from the user doc
+        var authHeader = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_clientId}:{_clientSecret}"));
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authHeader);
+
+        var content = new FormUrlEncodedContent(new[]
+        {
+            new KeyValuePair<string, string>("grant_type", "refresh_token"),
+            new KeyValuePair<string, string>("refresh_token", refresh_token),
+        });
         
+        var response = await _httpClient.PostAsync("https://accounts.spotify.com/api/token", content);
+        
+        if (response.IsSuccessStatusCode) {
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+            var tokenData = JsonConvert.DeserializeObject<SpotifyAccessToken>(jsonResponse);
+            tokenData!.SetExpiration();
+
+            if (tokenData!.RefreshToken == null) {
+                tokenData!.RefreshToken = refresh_token;
+            }
+
+            // store new access token in user doc
+            await _usersService.UpdateSpotifyAccessToken(userId, tokenData);
+
+            return tokenData!;
+        } else {
+            // Handle errors (log, throw exception, etc.)
+            throw new Exception("Could not retrieve access token using refresh token");
+        }
     }
 
     // get recently played api request
     public async Task<string> GetMostRecentTracks(string userId) {
+    
+         CheckUserAccessToken(userId);
 
-        CheckUserAccessToken(userId);
+        SpotifyAccessToken userAccessToken = await _usersService.GetSpotifyAccessToken(userId);
         
         var request = new HttpRequestMessage(HttpMethod.Get, "https://api.spotify.com/v1/me/player/recently-played?limit=1");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _userAccessToken.AccessToken);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", userAccessToken.AccessToken);
 
         var response = await _httpClient.SendAsync(request);
 
