@@ -13,7 +13,7 @@ public class SpotifyController : ControllerBase
         _spotifyService = spotifyService;
 
     [HttpGet("search")]
-    public async Task<IActionResult> Get([FromQuery] string query)
+    public async Task<IActionResult> SearchSpotifyTracks([FromQuery] string query)
     {
         if (string.IsNullOrWhiteSpace(query) || query.Length > 256) return BadRequest("Query must be between 1 and 256 characters.");
 
@@ -26,7 +26,7 @@ public class SpotifyController : ControllerBase
     }
 
     // post api endpoint
-    [HttpPost("{id:length(24)}/authcode")]
+    [HttpPost("authcode/{id:length(24)}")]
     public async Task<IActionResult> PostUserCode(string code, string id)
     {
         bool result = await _spotifyService.StoreAuthCodeAsync(code, id);
@@ -58,12 +58,12 @@ public class SpotifyController : ControllerBase
     //     // Return any errors encountered during the process
     //     return StatusCode(500, $"Error retrieving access token: {ex.Message}");
     // }
-        
+
     // }
 
     //get api endpoint to request most recently played tracks
     [HttpGet("recently-played/{userId}")]
-    public async Task<IActionResult> GetRecentlyPlayed(string userId) 
+    public async Task<IActionResult> GetRecentlyPlayed(string userId)
     {
         try
         {
@@ -71,7 +71,6 @@ public class SpotifyController : ControllerBase
             var recentlyPlayedTracks = await _spotifyService.GetMostRecentTracks(userId);
 
             // Return the JSON response directly
-            //return Ok(recentlyPlayedTracks);
             return Content(recentlyPlayedTracks, "application/json");
         }
         catch (Exception ex)
@@ -79,7 +78,23 @@ public class SpotifyController : ControllerBase
             // Return an error response if the service call fails
             return StatusCode(500, $"Error retrieving recent tracks: {ex.Message}");
         }
-
     }
 
+    [HttpGet("login/{authCode}")]
+    public async Task<IActionResult> SpotifyUserLogin(string authCode)
+    {
+        try
+        {
+            // Call the service to get user state
+            var userState = await _spotifyService.SpotifyUserLogin(authCode);
+
+            // Return the JSON response directly
+            return Content(userState, "application/json");
+        }
+        catch (Exception ex)
+        {
+            // Return an error response if the service call fails
+            return StatusCode(500, $"Error logging in user: {ex.Message}");
+        }
+    }
 }

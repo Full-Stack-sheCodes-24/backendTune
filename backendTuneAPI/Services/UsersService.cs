@@ -11,9 +11,7 @@ public class UsersService
         IOptions<UserDatabaseSettings> userDatabaseSettings)
     {
         var mongoClient = new MongoClient(userDatabaseSettings.Value.ConnectionString);
-
         var mongoDatabase = mongoClient.GetDatabase(userDatabaseSettings.Value.DatabaseName);
-
         _usersCollection = mongoDatabase.GetCollection<User>(userDatabaseSettings.Value.UsersCollectionName);
     }
 
@@ -116,7 +114,7 @@ public class UsersService
         return result.IsAcknowledged && result.ModifiedCount > 0;
     }
 
-    public async Task<bool> UpdateSpotifyAccessToken(string userId, SpotifyAccessToken token) {
+    public async Task<bool> UpdateSpotifyAccessToken(string userId, SpotifyUserAccessToken token) {
         // Find the user by ID
         var user = await _usersCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
 
@@ -125,10 +123,7 @@ public class UsersService
             return false;
 
         // Update the Code field in the user object
-        user.SpotifyAccessToken = token;
-
-        // adds refresh token string
-        user.RefreshToken = token.RefreshToken;
+        user.SpotifyUserAccessToken = token;
 
         // Replace the existing document with the updated user document
         var result = await _usersCollection.ReplaceOneAsync(x => x.Id == userId, user);
@@ -143,10 +138,17 @@ public class UsersService
         return user.SpotifyAuthenticationCode;
     }
 
-    public async Task<SpotifyAccessToken> GetSpotifyAccessToken(string userId) {
+    public async Task<SpotifyUserAccessToken> GetSpotifyUserAccessToken(string userId) {
         // Find the user by ID
         var user = await _usersCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
-        return user.SpotifyAccessToken;
+        return user.SpotifyUserAccessToken;
     }
 
+    public async Task<User> GetUserWithSpotifyId(string spotifyId)
+    {
+        // Find the user by ID
+        var user = await _usersCollection.Find(x => x.SpotifyId == spotifyId).FirstOrDefaultAsync();
+
+        return user;
+    }
 }
