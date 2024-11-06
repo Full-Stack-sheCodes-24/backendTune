@@ -39,16 +39,16 @@ public class UsersService
         return result.IsAcknowledged;
     }
 
-    public async Task<UserEntries[]> GetEntriesByUserIdAsync(string id)
+    public async Task<Entry[]> GetEntriesByUserIdAsync(string id)
     {
         // Find the user by ID
         var user = await _usersCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
 
         // If the user does not exist or has no entries, return an empty list
-        return user?.Entries ?? Array.Empty<UserEntries>();
+        return user?.Entries ?? Array.Empty<Entry>();
     }
 
-    public async Task<bool> AddEntryToUserAsync(string id, UserEntries newEntry)
+    public async Task<bool> AddEntryToUserAsync(string id, Entry newEntry)
     {
         // Find the user and update the Entries array by adding the new entry
         var updateResult = await _usersCollection.UpdateOneAsync(
@@ -60,7 +60,7 @@ public class UsersService
         return updateResult.ModifiedCount > 0;
     }
 
-    public async Task<bool> DeleteEntryByDateAsync(string id, string date)
+    public async Task<bool> DeleteEntryByDateAsync(string id, DateTime date)
     {
         // Define the filter to match the specific entry by date string
         var filter = Builders<User>.Filter.And(
