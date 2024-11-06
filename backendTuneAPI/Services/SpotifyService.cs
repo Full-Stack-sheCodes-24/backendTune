@@ -131,19 +131,9 @@ public class SpotifyService
     {
         SpotifyUserAccessToken userToken = await _usersService.GetSpotifyUserAccessToken(userId);
 
-        if (userToken == null)
+        if (userToken.IsExpired())
         {
-            userToken = await GetUserAccessToken(userId);
-
-            // Store access token in user doc
-            await _usersService.UpdateSpotifyAccessToken(userId, userToken);
-        }
-        else
-        {
-            if (userToken.IsExpired())
-            {
-                userToken = await RefreshAccessToken(userId, userToken);
-            }
+            userToken = await RefreshAccessToken(userId, userToken);
         }
 
         return userToken;
