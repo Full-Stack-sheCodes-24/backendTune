@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using MoodzApi.Models;
 using MoodzApi.Services;
 
 namespace MoodzApi.Controllers;
@@ -12,7 +13,7 @@ public class SpotifyController : ControllerBase
         _spotifyService = spotifyService;
 
     [HttpGet("search")]
-    public async Task<IActionResult> Get([FromQuery] string query)
+    public async Task<IActionResult> SearchSpotifyTracks([FromQuery] string query)
     {
         if (string.IsNullOrWhiteSpace(query) || query.Length > 256) return BadRequest("Query must be between 1 and 256 characters.");
 
@@ -25,7 +26,7 @@ public class SpotifyController : ControllerBase
     }
 
     // post api endpoint
-    [HttpPost("{id:length(24)}/authcode")]
+    [HttpPost("authcode/{id:length(24)}")]
     public async Task<IActionResult> PostUserCode(string code, string id)
     {
         bool result = await _spotifyService.StoreAuthCodeAsync(code, id);
@@ -37,6 +38,63 @@ public class SpotifyController : ControllerBase
         else
         {
             return NotFound();
+        }
+    }
+
+    // This is just to test that the token is updated in the user doc,
+    // [HttpPost("{id:length(24)}/token")]
+    // public async Task<IActionResult> PostUserToken(string userId)
+    // {
+    //     try
+    // {
+    //     // Call the GetUserAccessToken method in your service
+    //     var accessToken = await _spotifyService.CheckUserAccessToken(userId);
+
+    //     // Return the access token as part of the response for testing purposes
+    //     return Ok(new { AccessToken = accessToken.AccessToken, Expiration = accessToken.Expiration });
+    // }
+    // catch (Exception ex)
+    // {
+    //     // Return any errors encountered during the process
+    //     return StatusCode(500, $"Error retrieving access token: {ex.Message}");
+    // }
+
+    // }
+
+    //get api endpoint to request most recently played tracks
+    [HttpGet("recently-played/{userId}")]
+    public async Task<IActionResult> GetRecentlyPlayed(string userId)
+    {
+        try
+        {
+            // Call the service to get the most recent track
+            var recentlyPlayedTracks = await _spotifyService.GetMostRecentTracks(userId);
+
+            // Return the JSON response directly
+            return Content(recentlyPlayedTracks, "application/json");
+        }
+        catch (Exception ex)
+        {
+            // Return an error response if the service call fails
+            return StatusCode(500, $"Error retrieving recent tracks: {ex.Message}");
+        }
+    }
+
+    [HttpGet("login/{authCode}")]
+    public async Task<IActionResult> SpotifyUserLogin(string authCode)
+    {
+        try
+        {
+            // Call the service to get user state
+            var userState = await _spotifyService.SpotifyUserLogin(authCode);
+
+            // Return the JSON response directly
+            return Content(userState, "application/json");
+        }
+        catch (Exception ex)
+        {
+            // Return an error response if the service call fails
+            return StatusCode(500, $"Error logging in user: {ex.Message}");
         }
     }
 }

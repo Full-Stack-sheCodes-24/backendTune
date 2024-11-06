@@ -11,7 +11,6 @@ public class SpotifyAccessToken
 
     [JsonProperty("expires_in")]
     public int ExpiresIn { get; set; }
-
     public DateTime Expiration { get; private set; }
 
     //Calculates the Expiration time based on ExpiresIn

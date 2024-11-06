@@ -11,9 +11,7 @@ public class UsersService
         IOptions<UserDatabaseSettings> userDatabaseSettings)
     {
         var mongoClient = new MongoClient(userDatabaseSettings.Value.ConnectionString);
-
         var mongoDatabase = mongoClient.GetDatabase(userDatabaseSettings.Value.DatabaseName);
-
         _usersCollection = mongoDatabase.GetCollection<User>(userDatabaseSettings.Value.UsersCollectionName);
     }
 
@@ -41,16 +39,16 @@ public class UsersService
         return result.IsAcknowledged;
     }
 
-    public async Task<UserEntries[]> GetEntriesByUserIdAsync(string id)
+    public async Task<Entry[]> GetEntriesByUserIdAsync(string id)
     {
         // Find the user by ID
         var user = await _usersCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
 
         // If the user does not exist or has no entries, return an empty list
-        return user?.Entries ?? Array.Empty<UserEntries>();
+        return user?.Entries ?? Array.Empty<Entry>();
     }
 
-    public async Task<bool> AddEntryToUserAsync(string id, UserEntries newEntry)
+    public async Task<bool> AddEntryToUserAsync(string id, Entry newEntry)
     {
         // Find the user and update the Entries array by adding the new entry
         var updateResult = await _usersCollection.UpdateOneAsync(
@@ -62,7 +60,7 @@ public class UsersService
         return updateResult.ModifiedCount > 0;
     }
 
-    public async Task<bool> DeleteEntryByDateAsync(string id, string date)
+    public async Task<bool> DeleteEntryByDateAsync(string id, DateTime date)
     {
         // Define the filter to match the specific entry by date string
         var filter = Builders<User>.Filter.And(
@@ -114,5 +112,43 @@ public class UsersService
 
         // Return true if the update was successful
         return result.IsAcknowledged && result.ModifiedCount > 0;
+    }
+
+    public async Task<bool> UpdateSpotifyAccessToken(string userId, SpotifyUserAccessToken token) {
+        // Find the user by ID
+        var user = await _usersCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
+
+        // If the user is not found, return false
+        if (user == null)
+            return false;
+
+        // Update the Code field in the user object
+        user.SpotifyUserAccessToken = token;
+
+        // Replace the existing document with the updated user document
+        var result = await _usersCollection.ReplaceOneAsync(x => x.Id == userId, user);
+
+        // Return true if the update was successful
+        return result.IsAcknowledged && result.ModifiedCount > 0;
+    }
+
+    public async Task<string> GetSpotifyAuthorizationCode(string userId) {
+        // Find the user by ID
+        var user = await _usersCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
+        return user.SpotifyAuthenticationCode;
+    }
+
+    public async Task<SpotifyUserAccessToken> GetSpotifyUserAccessToken(string userId) {
+        // Find the user by ID
+        var user = await _usersCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
+        return user.SpotifyUserAccessToken;
+    }
+
+    public async Task<User> GetUserWithSpotifyId(string spotifyId)
+    {
+        // Find the user by ID
+        var user = await _usersCollection.Find(x => x.SpotifyId == spotifyId).FirstOrDefaultAsync();
+
+        return user;
     }
 }

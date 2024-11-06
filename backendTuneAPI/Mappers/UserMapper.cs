@@ -1,17 +1,25 @@
 ﻿using MoodzApi.Models;
 
-namespace MoodzApi.Mappers
+namespace MoodzApi.Mappers;
+public class UserMapper
 {
-    public class UserMapper
+    public User UserCreateRequestToUser(UserCreateRequest request)
     {
-        public User UserCreateRequestToUser(UserCreateRequest request)
+        return new User()
         {
-            return new User()
-            {
-                Id = null,
-                Email = request.Email,
-                Name = request.Name
-            };
-        }
+            Id = null,
+            Email = request.Email,
+            Name = request.Name
+        };
+    }
+
+    public UserState UserToUserState(User user)
+    {
+        return new UserState()
+        {
+            Id = user.Id,
+            Name = user.Name,
+            Entries = user.Entries
+        };
     }
 }
