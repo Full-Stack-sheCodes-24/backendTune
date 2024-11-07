@@ -8,7 +8,8 @@ public class SpotifyMapper
         return new User()
         {
             SpotifyId = spotifyUser.Id,
-            Name = spotifyUser.DisplayName
+            Name = spotifyUser.DisplayName,
+            ProfilePicUrl = spotifyUser.Images?.First()?.Url!
         };
     }
 }

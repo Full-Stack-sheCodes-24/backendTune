@@ -9,6 +9,7 @@ public class User
     public string? Id { get; set; }
     public string Email { get; set; } = null!;
     public string Name { get; set; } = null!;
+    public string ProfilePicUrl { get; set; } = null!;
     public Entry[] Entries { get; set; } = null!;
     public string SpotifyAuthenticationCode { get; set; } = null!;
     public SpotifyUserAccessToken SpotifyUserAccessToken { get; set; } = null!;
