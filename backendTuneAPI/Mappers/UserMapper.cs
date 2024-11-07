@@ -17,8 +17,9 @@ public class UserMapper
     {
         return new UserState()
         {
-            Id = user.Id,
+            Id = user.Id!,
             Name = user.Name,
+            ProfilePicUrl = user.ProfilePicUrl,
             Entries = user.Entries
         };
     }
