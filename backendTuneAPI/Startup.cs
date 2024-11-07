@@ -56,8 +56,10 @@ namespace MoodzApi
                 = new DefaultContractResolver());
 
             services.AddControllers()
-                .AddJsonOptions(    //prevents json field naming conventions from being converted to a different naming convention.
-                    options => options.JsonSerializerOptions.PropertyNamingPolicy = null);
+                .AddNewtonsoftJson(options =>
+                {
+                    options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                });
         }
 
 

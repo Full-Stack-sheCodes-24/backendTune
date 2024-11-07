@@ -19,7 +19,7 @@ public class SpotifyController : ControllerBase
 
         try {
             var searchResults = await _spotifyService.SearchTracks(query);
-            return Content(searchResults, "application/json");
+            return Ok(searchResults);
         } catch (Exception ex) {
             return BadRequest(ex.Message);
         }
@@ -55,7 +55,7 @@ public class SpotifyController : ControllerBase
             var recentlyPlayedTracks = await _spotifyService.GetMostRecentTracks(userId);
 
             // Return the JSON response directly
-            return Content(recentlyPlayedTracks, "application/json");
+            return Ok(recentlyPlayedTracks);
         }
         catch (Exception ex)
         {
@@ -73,7 +73,7 @@ public class SpotifyController : ControllerBase
             var userState = await _spotifyService.SpotifyUserLogin(authCode);
 
             // Return the JSON response directly
-            return Content(userState, "application/json");
+            return Ok(userState);
         }
         catch (Exception ex)
         {

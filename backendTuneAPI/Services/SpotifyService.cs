@@ -187,7 +187,7 @@ public class SpotifyService
     }
 
     // Login user and return user state
-    public async Task<string> SpotifyUserLogin(string authCode)
+    public async Task<UserState> SpotifyUserLogin(string authCode)
     {
         SpotifyUserAccessToken userAccessToken = await GetUserAccessToken(authCode);
 
@@ -216,11 +216,11 @@ public class SpotifyService
             // Condense user information down to just what we want to expose the frontend to
             UserState userState = _userMapper.UserToUserState(user);
 
-            return userState.ToJson();
+            return userState;
         }
         else
         {
-            throw new Exception($"Error getting recent tracks: {response.StatusCode} - {response.ReasonPhrase}");
+            throw new Exception($"Error logging in user: {response.StatusCode} - {response.ReasonPhrase}");
         }
     }
 }
