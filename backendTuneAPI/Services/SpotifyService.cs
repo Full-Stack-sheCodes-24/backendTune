@@ -83,11 +83,6 @@ public class SpotifyService
         }
     }
 
-    public async Task<bool> StoreAuthCodeAsync(string code, string userId)
-    {
-        return await _usersService.AddUserAuthCodeAsync(userId, code);
-    }
-
     // User access token swapping
     private async Task<SpotifyUserAccessToken> GetUserAccessToken(string authCode)
     {

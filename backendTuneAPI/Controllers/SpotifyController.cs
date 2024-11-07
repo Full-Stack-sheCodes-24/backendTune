@@ -25,22 +25,6 @@ public class SpotifyController : ControllerBase
         }
     }
 
-    // post api endpoint
-    [HttpPost("authcode/{id:length(24)}")]
-    public async Task<IActionResult> PostUserCode(string code, string id)
-    {
-        bool result = await _spotifyService.StoreAuthCodeAsync(code, id);
-
-        if (result)
-        {
-            return Ok(result);
-        }
-        else
-        {
-            return NotFound();
-        }
-    }
-
     // This is just to test that the token is updated in the user doc,
     // [HttpPost("{id:length(24)}/token")]
     // public async Task<IActionResult> PostUserToken(string userId)
