@@ -45,22 +45,28 @@ public class UsersService
         return result.IsAcknowledged;
     }
 
-    public async Task<Entry[]> GetEntriesByUserIdAsync(string id)
+    public async Task<List<Entry>> GetEntriesByUserIdAsync(string id)
     {
         // Find the user by ID
         var user = await _usersCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
 
         // If the user does not exist or has no entries, return an empty list
-        return user?.Entries ?? Array.Empty<Entry>();
+        return user?.Entries ?? new List<Entry>();
     }
 
     public async Task<bool> AddEntryToUserAsync(string id, Entry newEntry)
     {
+        var user = await _usersCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
+        if (user.Entries == null)
+        {
+            user.Entries = new List<Entry>(); // Initialize as an empty list if null
+        }
+
+        user.Entries.Add(newEntry);
+
         // Find the user and update the Entries array by adding the new entry
-        var updateResult = await _usersCollection.UpdateOneAsync(
-            x => x.Id == id,
-            Builders<User>.Update.Push(x => x.Entries, newEntry)
-        );
+        var updateResult = await _usersCollection.ReplaceOneAsync(
+            x => x.Id == id, user);
 
         // Return true if the update was successful, false otherwise
         return updateResult.ModifiedCount > 0;

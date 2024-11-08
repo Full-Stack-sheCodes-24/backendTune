@@ -73,7 +73,7 @@ public class UsersController : ControllerBase
     }
     
     [HttpGet("{id:length(24)}/entries")]
-    public async Task<ActionResult<Entry[]>> GetEntries(string id)
+    public async Task<ActionResult<List<Entry>>> GetEntries(string id)
     {
         // Fetch all entries for the specified userId
         var entries = await _usersService.GetEntriesByUserIdAsync(id);
