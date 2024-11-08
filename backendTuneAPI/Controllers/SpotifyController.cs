@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using MoodzApi.Models;
 using MoodzApi.Services;
 
@@ -46,7 +47,9 @@ public class SpotifyController : ControllerBase
     // }
 
     //get api endpoint to request most recently played tracks
+ 
     [HttpGet("recently-played/{userId}")]
+    [Authorize]
     public async Task<IActionResult> GetRecentlyPlayed(string userId)
     {
         try

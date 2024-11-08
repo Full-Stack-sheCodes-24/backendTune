@@ -14,6 +14,10 @@ using Microsoft.Extensions.FileProviders;
 using System.IO;
 using MoodzApi.Models;
 using MoodzApi.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.Extensions.Options;
 
 namespace MoodzApi
 {
@@ -29,6 +33,8 @@ namespace MoodzApi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.Configure<JwtSettings>(Configuration.GetSection("JwtSettings"));
+            
             //Enable CORS
             services.AddCors(c =>
             {
@@ -36,6 +42,28 @@ namespace MoodzApi
             });
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
+
+            //JWT authentication
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                var jwtSettings = Configuration.GetSection("JwtSettings").Get<JwtSettings>();
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = jwtSettings.Issuer,
+                    ValidAudience = jwtSettings.Audience,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey))
+                };
+            });
 
             //Initialize settings Models w/ secrets.json 
             services.Configure<UserDatabaseSettings>(
@@ -79,6 +107,8 @@ namespace MoodzApi
 
 
             app.UseRouting();
+
+            app.UseAuthentication();
 
             app.UseAuthorization();
 
