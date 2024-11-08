@@ -216,6 +216,10 @@ public class SpotifyService
             // Condense user information down to just what we want to expose the frontend to
             UserState userState = _userMapper.UserToUserState(user);
 
+            var jwtToken = _usersService.GenerateToken(user.Id);
+
+            userState.JwtToken = jwtToken;
+
             return userState;
         }
         else

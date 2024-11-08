@@ -1,18 +1,24 @@
 using MoodzApi.Models;
 using MongoDB.Driver;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace MoodzApi.Services;
 
 public class UsersService
 {
     private readonly IMongoCollection<User> _usersCollection;
+    private readonly JwtSettings _jwtSettings;
     public UsersService(
-        IOptions<UserDatabaseSettings> userDatabaseSettings)
+        IOptions<UserDatabaseSettings> userDatabaseSettings, IOptions<JwtSettings> jwtSettings)
     {
         var mongoClient = new MongoClient(userDatabaseSettings.Value.ConnectionString);
         var mongoDatabase = mongoClient.GetDatabase(userDatabaseSettings.Value.DatabaseName);
         _usersCollection = mongoDatabase.GetCollection<User>(userDatabaseSettings.Value.UsersCollectionName);
+        _jwtSettings = jwtSettings.Value;
     }
 
     public async Task<List<User>> GetAsync() =>
@@ -108,5 +114,29 @@ public class UsersService
         var user = await _usersCollection.Find(x => x.SpotifyId == spotifyId).FirstOrDefaultAsync();
 
         return user;
+    }
+
+    public string GenerateToken(string userId)
+    {
+        var claims = new[]
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, userId),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: _jwtSettings.Issuer,
+            audience: _jwtSettings.Audience,
+            claims: claims,
+            expires: DateTime.Now.AddMinutes(_jwtSettings.ExpiryMinutes),
+            signingCredentials: creds
+        );
+
+        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+        return tokenString;
     }
 }

@@ -5,4 +5,5 @@ public class UserState
     public string Name { get; set; } = null!;
     public string ProfilePicUrl { get; set; } = null!;
     public Entry[] Entries { get; set; } = null!;
+    public string JwtToken { get; set; } = null!;
 }
