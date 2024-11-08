@@ -14,6 +14,7 @@ public class SpotifyController : ControllerBase
         _spotifyService = spotifyService;
 
     [HttpGet("search")]
+    [Authorize]
     public async Task<IActionResult> SearchSpotifyTracks([FromQuery] string query)
     {
         if (string.IsNullOrWhiteSpace(query) || query.Length > 256) return BadRequest("Query must be between 1 and 256 characters.");

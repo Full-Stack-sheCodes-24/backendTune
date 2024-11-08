@@ -61,6 +61,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpDelete("{id:length(24)}")]
+    [Authorize]
     public async Task<IActionResult> Delete(string id) {
         var user = await _usersService.GetAsync(id);
 
@@ -73,6 +74,7 @@ public class UsersController : ControllerBase
     }
     
     [HttpGet("{id:length(24)}/entries")]
+    [Authorize]
     public async Task<ActionResult<List<Entry>>> GetEntries(string id)
     {
         // Fetch all entries for the specified userId
@@ -89,6 +91,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("{id:length(24)}/entries")]
+    [Authorize]
     public async Task<ActionResult> AddEntry(string id, Entry newEntry)
     {
         // Call the service method to add the entry
@@ -105,6 +108,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpDelete("{id:length(24)}/entries/{date}")]
+    [Authorize]
     public async Task<ActionResult> DeleteEntry(string id, DateTime date)
     {
         // Call the service method to delete the entry
