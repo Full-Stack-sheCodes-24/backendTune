@@ -27,6 +27,38 @@ public class SpotifyController : ControllerBase
         }
     }
 
+    [HttpGet("search/v2/{userId}")]
+    [Authorize]
+    public async Task<IActionResult> SearchSpotifyTracksWithUserAccessToken([FromQuery] string query, string userId)
+    {
+        if (string.IsNullOrWhiteSpace(query) || query.Length > 256) return BadRequest("Query must be between 1 and 256 characters.");
+
+        try
+        {
+            var searchResults = await _spotifyService.SearchTracksWithUserAccessToken(query, userId);
+            return Ok(searchResults);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpGet("track/{trackId}/{userId}")]
+    [Authorize]
+    public async Task<IActionResult> GetTrack(string trackId, string userId)
+    {
+        try
+        {
+            var track = await _spotifyService.GetTrack(trackId, userId);
+            return Ok(track);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
     // This is just to test that the token is updated in the user doc,
     // [HttpPost("{id:length(24)}/token")]
     // public async Task<IActionResult> PostUserToken(string userId)
@@ -48,7 +80,7 @@ public class SpotifyController : ControllerBase
     // }
 
     //get api endpoint to request most recently played tracks
- 
+
     [HttpGet("recently-played/{userId}")]
     [Authorize]
     public async Task<IActionResult> GetRecentlyPlayed(string userId)

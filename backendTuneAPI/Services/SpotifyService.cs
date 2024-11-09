@@ -227,4 +227,49 @@ public class SpotifyService
             throw new Exception($"Error logging in user: {response.StatusCode} - {response.ReasonPhrase}");
         }
     }
+
+    public async Task<string> SearchTracksWithUserAccessToken(string query, string userId)
+    {
+        SpotifyAccessToken userAccessToken = await CheckUserAccessToken(userId);
+
+        // Encode the query to handle special characters
+        var encodedQuery = Uri.EscapeDataString(query);
+        var request = new HttpRequestMessage(HttpMethod.Get, $"https://api.spotify.com/v1/search?q={encodedQuery}&type=track&market=US&include_external=audio");
+
+        // Add the Authorization header to the request
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", userAccessToken.AccessToken);
+
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+            return jsonResponse; // This will return the search results in JSON format
+        }
+        else
+        {
+            throw new Exception($"Error searching tracks: {response.StatusCode} - {response.ReasonPhrase}");
+        }
+    }
+
+    // get track info
+    public async Task<string> GetTrack(string trackId, string userId)
+    {
+        SpotifyAccessToken userAccessToken = await CheckUserAccessToken(userId);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, $"https://api.spotify.com/v1/tracks/{trackId}?market=US");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", userAccessToken.AccessToken);
+
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+            return jsonResponse; // This will return the search results in JSON format
+        }
+        else
+        {
+            throw new Exception($"Error getting track info: {response.StatusCode} - {response.ReasonPhrase}");
+        }
+    }
 }
