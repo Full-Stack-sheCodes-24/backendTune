@@ -20,6 +20,20 @@ public class UserMapper
             Id = user.Id!,
             Name = user.Name,
             ProfilePicUrl = user.ProfilePicUrl,
+            BioText = user.BioText,
+            Birthday = user.Birthday,
+            Entries = user.Entries
+        };
+    }
+    public PublicUserState UserToPublicUserState(User user)
+    {
+        return new PublicUserState()
+        {
+            Id = user.Id!,
+            Name = user.Name,
+            ProfilePicUrl = user.ProfilePicUrl,
+            BioText = user.BioText,
+            Birthday = user.Birthday,
             Entries = user.Entries
         };
     }

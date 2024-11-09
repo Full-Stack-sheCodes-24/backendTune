@@ -5,6 +5,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Xml.Linq;
+using MongoDB.Bson;
 
 namespace MoodzApi.Services;
 
@@ -144,5 +146,48 @@ public class UsersService
         var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
 
         return tokenString;
+    }
+
+    public async Task<List<User>> SearchUsersByName(string query)
+    {
+        var users = new List<User>();
+
+        // Filter for names that start with the search term (prefix match, case-insensitive)
+        var prefixMatchFilter = Builders<User>.Filter.Regex("Name", new BsonRegularExpression($"^{query}", "i"));
+
+        // Filter for names that contain the search term anywhere (partial match, case-insensitive)
+        var partialMatchFilter = Builders<User>.Filter.Regex("Name", new BsonRegularExpression(query, "i"));
+
+        // First, retrieve users where the name starts with the search term, sorted alphabetically
+        var prefixMatches = await _usersCollection
+            .Find(prefixMatchFilter)
+            .Sort(Builders<User>.Sort.Ascending("Name"))
+            .Limit(10)
+            .ToListAsync();
+
+        users.AddRange(prefixMatches);
+
+        // If we still need more results to reach a limit of 10, fetch partial matches excluding prefix matches
+        if (users.Count < 10)
+        {
+            // Gather the IDs of the prefix matches to exclude them from the next query
+            var excludedIds = prefixMatches.Select(u => u.Id).ToList();
+
+            // Create a filter that excludes users already in prefixMatches
+            var excludePrefixMatchesFilter = Builders<User>.Filter.And(
+                partialMatchFilter,
+                Builders<User>.Filter.Nin(u => u.Id, excludedIds) // Ensuring IDs are excluded properly
+            );
+
+            var partialMatches = await _usersCollection
+                .Find(excludePrefixMatchesFilter)
+                .Sort(Builders<User>.Sort.Ascending("Name"))
+                .Limit(10 - users.Count) // Limit by remaining slots
+                .ToListAsync();
+
+            users.AddRange(partialMatches);
+        }
+
+        return users;
     }
 }

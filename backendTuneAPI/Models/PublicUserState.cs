@@ -1,5 +1,5 @@
 ﻿namespace MoodzApi.Models;
-public class UserState
+public class PublicUserState
 {
     public string Id { get; set; } = null!;
     public string Name { get; set; } = null!;
@@ -7,5 +7,4 @@ public class UserState
     public string BioText { get; set; } = null!;
     public DateTime Birthday { get; set; } = default!;
     public List<Entry> Entries { get; set; } = new List<Entry>()!;
-    public string JwtToken { get; set; } = null!;
 }

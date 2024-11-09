@@ -25,13 +25,13 @@ public class UsersController : ControllerBase
         await _usersService.GetAsync();
 
     [HttpGet("{id:length(24)}")]
-    public async Task<ActionResult<User>> Get(string id)
+    public async Task<ActionResult<PublicUserState>> Get(string id)
     {
         var user = await _usersService.GetAsync(id);
 
         if (user is null) return NotFound();
 
-        return user;
+        return _userMapper.UserToPublicUserState(user);
     }
 
     [HttpPost]
@@ -122,5 +122,29 @@ public class UsersController : ControllerBase
 
         // If the user or entry was not found, return 404 Not Found
         return NotFound();
+    }
+
+    [HttpGet("search")]
+    public async Task<ActionResult<List<UserState>>> SearchUsersByName([FromQuery] string query)
+    {
+        if (string.IsNullOrWhiteSpace(query) || query.Length > 256) return BadRequest("Query must be between 1 and 256 characters.");
+
+        try
+        {
+            var searchResults = await _usersService.SearchUsersByName(query);
+
+            // Convert List<User> to List<UserState>
+            var userStateResults = new List<UserState>();
+            foreach (var user in searchResults)
+            {
+                userStateResults.Add(_userMapper.UserToUserState(user));
+            }
+
+            return Ok(userStateResults);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 }
