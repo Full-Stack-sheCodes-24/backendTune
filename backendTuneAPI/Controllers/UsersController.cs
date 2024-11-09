@@ -125,7 +125,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("search")]
-    public async Task<ActionResult<List<UserState>>> SearchUsersByName([FromQuery] string query)
+    public async Task<ActionResult<List<PublicUserState>>> SearchUsersByName([FromQuery] string query)
     {
         if (string.IsNullOrWhiteSpace(query) || query.Length > 256) return BadRequest("Query must be between 1 and 256 characters.");
 
@@ -133,11 +133,11 @@ public class UsersController : ControllerBase
         {
             var searchResults = await _usersService.SearchUsersByName(query);
 
-            // Convert List<User> to List<UserState>
-            var userStateResults = new List<UserState>();
+            // Convert List<User> to List<PublicUserState>
+            var userStateResults = new List<PublicUserState>();
             foreach (var user in searchResults)
             {
-                userStateResults.Add(_userMapper.UserToUserState(user));
+                userStateResults.Add(_userMapper.UserToPublicUserState(user));
             }
 
             return Ok(userStateResults);
