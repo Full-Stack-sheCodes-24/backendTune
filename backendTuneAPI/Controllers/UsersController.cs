@@ -149,6 +149,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{id:length(24)}/profile")]
+    [Authorize]
     public async Task<IActionResult> UpdateUserProfile(string id, [FromBody] ProfileInfo profileInfo)
     {
         // Call the service method to update profile info
