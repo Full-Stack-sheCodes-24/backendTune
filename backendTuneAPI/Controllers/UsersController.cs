@@ -4,7 +4,6 @@ using MoodzApi.Services;
 using MoodzApi.Mappers;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace MoodzApi.Controllers;
 
