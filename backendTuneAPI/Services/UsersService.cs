@@ -14,12 +14,16 @@ namespace MoodzApi.Services;
 public class UsersService
 {
     private readonly IMongoCollection<User> _usersCollection;
+    private readonly JwtSettings _jwtSettings;
+    private readonly JwtTokenService _jwtTokenService;
     public UsersService(
-        IOptions<UserDatabaseSettings> userDatabaseSettings)
+        IOptions<UserDatabaseSettings> userDatabaseSettings, IOptions<JwtSettings> jwtSettings, JwtTokenService jwtTokenService)
     {
         var mongoClient = new MongoClient(userDatabaseSettings.Value.ConnectionString);
         var mongoDatabase = mongoClient.GetDatabase(userDatabaseSettings.Value.DatabaseName);
         _usersCollection = mongoDatabase.GetCollection<User>(userDatabaseSettings.Value.UsersCollectionName);
+        _jwtSettings = jwtSettings.Value;
+        _jwtTokenService = jwtTokenService;
     }
 
     public async Task<List<User>> GetAsync() =>
@@ -179,5 +183,52 @@ public class UsersService
         var result = await _usersCollection.ReplaceOneAsync(x => x.Id == id, user);
 
         return result.IsAcknowledged && result.ModifiedCount > 0;
+    }
+
+    public async Task<bool> UpdateUserRefreshToken(string userId, Auth refreshToken)
+    {
+        var filter = Builders<User>.Filter.Eq(u => u.Id, userId);
+        var update = Builders<User>.Update
+            .Set(u => u.RefreshToken, refreshToken.RefreshToken)
+            .Set(u => u.RefreshTokenExpiresAt, DateTime.Now.AddMinutes(refreshToken.ExpiresIn));
+
+        var result = await _usersCollection.UpdateOneAsync(filter, update);
+        return result.IsAcknowledged && result.ModifiedCount > 0;
+    }
+
+    //generate the refresh token for the user with corresponding id
+    public async Task<Auth> GenerateNewAuth(string userId)
+    {
+        var refreshTokenString = _jwtTokenService.GenerateRefreshToken();
+
+        var newAuth = new Auth
+        {
+            AccessToken = _jwtTokenService.GenerateToken(userId),
+            RefreshToken = refreshTokenString,
+            ExpiresIn = _jwtSettings.ExpiryMinutes
+        };
+
+        await UpdateUserRefreshToken(userId, newAuth);
+
+        return newAuth;     
+    }
+
+    //check for refresh token string among the users in the database
+    public async Task<User> GetUserWithRefreshToken(string refreshToken)
+    {
+        var user = await _usersCollection.Find(x => x.RefreshToken == refreshToken).FirstOrDefaultAsync();
+        return user;
+    }
+
+    //check for refresh token string among the users in the database
+    public async Task<string> ValidateRefreshToken(string refreshToken)
+    {
+        var user = await GetUserWithRefreshToken(refreshToken);
+        if (user == null || user.RefreshTokenExpiresAt == null || user.RefreshTokenExpiresAt <= DateTime.UtcNow)
+        {
+            return null;
+        }
+
+        return user.Id;
     }
 }

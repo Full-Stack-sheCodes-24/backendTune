@@ -12,14 +12,10 @@ namespace MoodzApi.Services
     public class JwtTokenService
     {
         private readonly JwtSettings _jwtSettings;
-        private readonly IMongoCollection<User> _usersCollection;
         public JwtTokenService(
-            IOptions<JwtSettings> jwtSettings, IOptions<UserDatabaseSettings> userDatabaseSettings)
+            IOptions<JwtSettings> jwtSettings)
         {
             _jwtSettings = jwtSettings.Value;
-            var mongoClient = new MongoClient(userDatabaseSettings.Value.ConnectionString);
-            var mongoDatabase = mongoClient.GetDatabase(userDatabaseSettings.Value.DatabaseName);
-            _usersCollection = mongoDatabase.GetCollection<User>(userDatabaseSettings.Value.UsersCollectionName);
         }
 
         //generate the jwt token for the user with corresponding id
@@ -46,30 +42,14 @@ namespace MoodzApi.Services
 
             return tokenString;
         }
-        //generate the refresh token for the user with corresponding id
-        public async Task<Auth> GenerateRefreshToken(string userId)
+
+        public string GenerateRefreshToken()
         {
             var randomNumber = new byte[32];
             using (var rng = RandomNumberGenerator.Create())
             {
                 rng.GetBytes(randomNumber);
-                var refreshTokenString = Convert.ToBase64String(randomNumber);
-
-                var newRefreshToken = new Auth
-                {
-                    AccessToken = GenerateToken(userId),
-                    RefreshToken = refreshTokenString,
-                    ExpiresIn = _jwtSettings.ExpiryMinutes
-                };
-
-                var filter = Builders<User>.Filter.Eq(u => u.Id, userId);
-                var update = Builders<User>.Update
-                    .Set(u => u.RefreshToken, refreshTokenString)
-                    .Set(u => u.RefreshTokenExpiresAt, DateTime.Now.AddMinutes(newRefreshToken.ExpiresIn));
-
-                await _usersCollection.UpdateOneAsync(filter, update);
-
-                return newRefreshToken;
+                return Convert.ToBase64String(randomNumber);
             }
         }
 
@@ -97,18 +77,6 @@ namespace MoodzApi.Services
             }
             // If token is not valid or missing exp claim, consider it expired
             return true;
-        }
-
-        //check for refresh token string among the users in the database
-        public async Task<string> ValidateRefreshToken(string refreshToken)
-        {
-            var user = await _usersCollection.Find(x => x.RefreshToken == refreshToken).FirstOrDefaultAsync();
-            if (user == null || user.RefreshTokenExpiresAt == null || user.RefreshTokenExpiresAt <= DateTime.UtcNow)
-            {
-                return null;
-            }
-
-            return user.Id;
         }
     }
 }
