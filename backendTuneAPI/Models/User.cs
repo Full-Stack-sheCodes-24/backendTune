@@ -14,5 +14,7 @@ public class User
     public DateTime? Birthday { get; set; }
     public List<Entry> Entries { get; set; } = new List<Entry>();
     public SpotifyUserAccessToken SpotifyUserAccessToken { get; set; } = null!;
+    public string RefreshToken { get; set; } = null!;
+    public DateTime? RefreshTokenExpiresAt { get; set; }
     public string SpotifyId { get; set; } = null!;
 }

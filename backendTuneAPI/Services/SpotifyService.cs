@@ -18,8 +18,11 @@ public class SpotifyService
     private readonly string _redirectUri;
     private readonly UserMapper _userMapper;
     private readonly SpotifyMapper _spotifyMapper;
+    private readonly JwtTokenService _jwtTokenService;
+    private readonly JwtSettings _jwtSettings;
 
-    public SpotifyService(IOptions<SpotifyAuthSettings> spotifyAuthSettings, UsersService usersService, IConfiguration configuration)
+    public SpotifyService(IOptions<SpotifyAuthSettings> spotifyAuthSettings, UsersService usersService, 
+        JwtTokenService jwtTokenService, IOptions<JwtSettings> jwtSettings, IConfiguration configuration)
     {
         _httpClient = new HttpClient();
         _clientId = spotifyAuthSettings.Value.ClientId;
@@ -29,6 +32,8 @@ public class SpotifyService
         _redirectUri = configuration["Spotify:RedirectUri"]!;
         _userMapper = new UserMapper();
         _spotifyMapper = new SpotifyMapper();
+        _jwtTokenService = jwtTokenService;
+        _jwtSettings = jwtSettings.Value;
     }
 
 
@@ -216,9 +221,13 @@ public class SpotifyService
             // Condense user information down to just what we want to expose the frontend to
             UserState userState = _userMapper.UserToUserState(user);
 
-            var jwtToken = _usersService.GenerateToken(user.Id);
+            //update userState with jwt and refresh tokens to the frontend
+            var jwtToken = _jwtTokenService.GenerateToken(user.Id);
+            var refreshToken = await _jwtTokenService.GenerateRefreshToken(user.Id);
 
-            userState.JwtToken = jwtToken;
+            userState.JwtToken.accessToken = jwtToken;
+            userState.RefreshToken = refreshToken;
+            userState.RefreshToken.expiresAt = refreshToken.expiresAt;
 
             return userState;
         }
