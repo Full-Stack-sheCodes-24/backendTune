@@ -1,13 +1,7 @@
 using MoodzApi.Models;
 using MongoDB.Driver;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using System.Xml.Linq;
 using MongoDB.Bson;
-using System.Security.Cryptography;
 
 namespace MoodzApi.Services;
 
@@ -190,27 +184,10 @@ public class UsersService
         var filter = Builders<User>.Filter.Eq(u => u.Id, userId);
         var update = Builders<User>.Update
             .Set(u => u.RefreshToken, refreshToken.RefreshToken)
-            .Set(u => u.RefreshTokenExpiresAt, DateTime.Now.AddMinutes(refreshToken.ExpiresIn));
+            .Set(u => u.RefreshTokenExpiresAt, DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiryDays));
 
         var result = await _usersCollection.UpdateOneAsync(filter, update);
         return result.IsAcknowledged && result.ModifiedCount > 0;
-    }
-
-    //generate the refresh token for the user with corresponding id
-    public async Task<Auth> GenerateNewAuth(string userId)
-    {
-        var refreshTokenString = _jwtTokenService.GenerateRefreshToken();
-
-        var newAuth = new Auth
-        {
-            AccessToken = _jwtTokenService.GenerateToken(userId),
-            RefreshToken = refreshTokenString,
-            ExpiresIn = _jwtSettings.ExpiryMinutes
-        };
-
-        await UpdateUserRefreshToken(userId, newAuth);
-
-        return newAuth;     
     }
 
     //check for refresh token string among the users in the database
@@ -220,15 +197,16 @@ public class UsersService
         return user;
     }
 
-    //check for refresh token string among the users in the database
-    public async Task<string> ValidateRefreshToken(string refreshToken)
+    public async Task<bool> IsRefreshTokenExpired(string refreshToken)
     {
         var user = await GetUserWithRefreshToken(refreshToken);
+
+        // If user not found, or refresh token doesn't exist, or refresh token is expired, return true
         if (user == null || user.RefreshTokenExpiresAt == null || user.RefreshTokenExpiresAt <= DateTime.UtcNow)
         {
-            return null;
+            return true;
         }
 
-        return user.Id;
+        return false;
     }
 }
