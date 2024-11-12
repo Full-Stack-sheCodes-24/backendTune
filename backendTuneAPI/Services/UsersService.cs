@@ -190,4 +190,19 @@ public class UsersService
 
         return users;
     }
+
+    public async Task<bool> UpdateProfileInfoAsync(string id, ProfileInfo profileInfo)
+    {
+        var user = await _usersCollection.Find(user => user.Id == id).FirstOrDefaultAsync();
+
+        if (user == null) return false;
+
+        user.ProfilePicUrl = profileInfo.ProfilePicUrl ?? user.ProfilePicUrl;
+        user.BioText = profileInfo.BioText ?? user.BioText;
+        user.Birthday = profileInfo.Birthday ?? user.Birthday;
+
+        var result = await _usersCollection.ReplaceOneAsync(x => x.Id == id, user);
+
+        return result.IsAcknowledged && result.ModifiedCount > 0;
+    }
 }

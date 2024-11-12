@@ -5,7 +5,7 @@ public class UserState
     public string Name { get; set; } = null!;
     public string ProfilePicUrl { get; set; } = null!;
     public string BioText { get; set; } = null!;
-    public DateTime Birthday { get; set; } = default!;
+    public DateTime? Birthday { get; set; }
     public List<Entry> Entries { get; set; } = new List<Entry>()!;
     public string JwtToken { get; set; } = null!;
 }

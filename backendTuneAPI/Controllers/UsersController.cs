@@ -147,4 +147,20 @@ public class UsersController : ControllerBase
             return BadRequest(ex.Message);
         }
     }
+
+    [HttpPut("{id:length(24)}/profile")]
+    [Authorize]
+    public async Task<IActionResult> UpdateUserProfile(string id, [FromBody] ProfileInfo profileInfo)
+    {
+        // Call the service method to update profile info
+        var success = await _usersService.UpdateProfileInfoAsync(id, profileInfo);
+
+        if (success)
+        {
+            return Ok();
+        }
+
+        // If the user or entry was not found, return 404 Not Found
+        return NotFound();
+    }
 }
