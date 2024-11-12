@@ -47,7 +47,7 @@ namespace MoodzApi.Services
             return tokenString;
         }
         //generate the refresh token for the user with corresponding id
-        public async Task<RefreshToken> GenerateRefreshToken(string userId)
+        public async Task<Auth> GenerateRefreshToken(string userId)
         {
             var randomNumber = new byte[32];
             using (var rng = RandomNumberGenerator.Create())
@@ -55,16 +55,17 @@ namespace MoodzApi.Services
                 rng.GetBytes(randomNumber);
                 var refreshTokenString = Convert.ToBase64String(randomNumber);
 
-                var newRefreshToken = new RefreshToken
+                var newRefreshToken = new Auth
                 {
-                    accessToken = refreshTokenString,
-                    expiresAt = DateTime.UtcNow.AddMinutes(3)
+                    AccessToken = GenerateToken(userId),
+                    RefreshToken = refreshTokenString,
+                    ExpiresIn = _jwtSettings.ExpiryMinutes
                 };
 
                 var filter = Builders<User>.Filter.Eq(u => u.Id, userId);
                 var update = Builders<User>.Update
-                    .Set(u => u.RefreshToken, newRefreshToken.accessToken)
-                    .Set(u => u.RefreshTokenExpiresAt, newRefreshToken.expiresAt);
+                    .Set(u => u.RefreshToken, refreshTokenString)
+                    .Set(u => u.RefreshTokenExpiresAt, DateTime.Now.AddMinutes(newRefreshToken.ExpiresIn));
 
                 await _usersCollection.UpdateOneAsync(filter, update);
 
@@ -73,14 +74,14 @@ namespace MoodzApi.Services
         }
 
         //required import to read token
-        public static bool IsTokenExpired(JwtToken jwtToken)
+        public static bool IsTokenExpired(Auth accessToken)
         {
             var handler = new JwtSecurityTokenHandler();
 
             // Check if the token is in a valid JWT format
-            if (handler.CanReadToken(jwtToken.accessToken))
+            if (handler.CanReadToken(accessToken.AccessToken))
             {
-                var token = handler.ReadJwtToken(jwtToken.accessToken);
+                var token = handler.ReadJwtToken(accessToken.AccessToken);
 
                 // Retrieve the expiration claim (exp)
                 var expClaim = token.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Exp);

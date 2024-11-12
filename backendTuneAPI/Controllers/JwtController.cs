@@ -21,7 +21,7 @@ namespace MoodzApi.Controllers
 
         //api endpoint to get a new jwt and refresh token
         [HttpPost("refresh")]
-        public async Task<IActionResult> RefreshToken(string refreshToken, JwtToken jwtToken)
+        public async Task<IActionResult> RefreshToken(string refreshToken, Auth jwtToken)
         {
             if (!JwtTokenService.IsTokenExpired(jwtToken))
             {
@@ -31,13 +31,11 @@ namespace MoodzApi.Controllers
             var userId = await _jwtTokenService.ValidateRefreshToken(refreshToken);
             if (userId == null) return Unauthorized("Invalid or expired refresh token.");
 
-            var newJwtToken = _jwtTokenService.GenerateToken(userId);
             var newRefreshToken = await _jwtTokenService.GenerateRefreshToken(userId);
 
             return Ok(new
             {
-                JwtToken = new JwtToken { accessToken = newJwtToken },
-                RefreshToken = new RefreshToken { accessToken = newRefreshToken.accessToken, expiresAt = newRefreshToken.expiresAt }
+                JwtToken = new Auth { AccessToken = newRefreshToken.AccessToken , RefreshToken = newRefreshToken.RefreshToken, ExpiresIn = newRefreshToken.ExpiresIn}
             });
         }
 

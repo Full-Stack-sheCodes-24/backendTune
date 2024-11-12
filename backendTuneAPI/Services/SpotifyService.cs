@@ -222,12 +222,11 @@ public class SpotifyService
             UserState userState = _userMapper.UserToUserState(user);
 
             //update userState with jwt and refresh tokens to the frontend
-            var jwtToken = _jwtTokenService.GenerateToken(user.Id);
             var refreshToken = await _jwtTokenService.GenerateRefreshToken(user.Id);
 
-            userState.JwtToken.accessToken = jwtToken;
-            userState.RefreshToken = refreshToken;
-            userState.RefreshToken.expiresAt = refreshToken.expiresAt;
+            userState.Auth.AccessToken = refreshToken.AccessToken;
+            userState.Auth.RefreshToken = refreshToken.RefreshToken;
+            userState.Auth.ExpiresIn = refreshToken.ExpiresIn;
 
             return userState;
         }
