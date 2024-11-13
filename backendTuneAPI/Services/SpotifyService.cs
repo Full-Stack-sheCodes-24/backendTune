@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Options;
-using MongoDB.Bson;
 using MoodzApi.Mappers;
 using MoodzApi.Models;
 using Newtonsoft.Json;
@@ -18,8 +17,11 @@ public class SpotifyService
     private readonly string _redirectUri;
     private readonly UserMapper _userMapper;
     private readonly SpotifyMapper _spotifyMapper;
+    private readonly JwtSettings _jwtSettings;
+    private readonly JwtTokenService _jwtTokenService;
 
-    public SpotifyService(IOptions<SpotifyAuthSettings> spotifyAuthSettings, UsersService usersService, IConfiguration configuration)
+    public SpotifyService(IOptions<SpotifyAuthSettings> spotifyAuthSettings, UsersService usersService, 
+        IOptions<JwtSettings> jwtSettings, IConfiguration configuration, JwtTokenService jwtTokenService)
     {
         _httpClient = new HttpClient();
         _clientId = spotifyAuthSettings.Value.ClientId;
@@ -29,6 +31,8 @@ public class SpotifyService
         _redirectUri = configuration["Spotify:RedirectUri"]!;
         _userMapper = new UserMapper();
         _spotifyMapper = new SpotifyMapper();
+        _jwtSettings = jwtSettings.Value;
+        _jwtTokenService = jwtTokenService;
     }
 
 
@@ -216,9 +220,12 @@ public class SpotifyService
             // Condense user information down to just what we want to expose the frontend to
             UserState userState = _userMapper.UserToUserState(user);
 
-            var jwtToken = _usersService.GenerateToken(user.Id);
-
-            userState.JwtToken = jwtToken;
+            // Generate new Access + Refresh token for user.
+            Auth newAuth = _jwtTokenService.GenerateNewAuth(user.Id!);
+            // Store refresh token in user doc
+            await _usersService.UpdateUserRefreshToken(user.Id!, newAuth);
+            // Append auth to userState
+            userState.Auth = newAuth;
 
             return userState;
         }

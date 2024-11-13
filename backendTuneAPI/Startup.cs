@@ -61,7 +61,8 @@ namespace MoodzApi
                     ValidateIssuerSigningKey = true,
                     ValidIssuer = jwtSettings.Issuer,
                     ValidAudience = jwtSettings.Audience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey))
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
+                    ClockSkew = TimeSpan.Zero
                 };
             });
 
@@ -75,6 +76,7 @@ namespace MoodzApi
             //Initializes connection to MongoDBAtlas only ONCE! This single connection can now be used as a dependency injection across the whole app
             services.AddSingleton<UsersService>();
             services.AddSingleton<SpotifyService>();    //Spotify service keeps track of when we need to update auth token
+            services.AddSingleton<JwtTokenService>();
 
 
             //JSON Serializer

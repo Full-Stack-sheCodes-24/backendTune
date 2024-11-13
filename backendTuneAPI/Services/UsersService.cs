@@ -1,11 +1,6 @@
 using MoodzApi.Models;
 using MongoDB.Driver;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using System.Xml.Linq;
 using MongoDB.Bson;
 
 namespace MoodzApi.Services;
@@ -14,13 +9,15 @@ public class UsersService
 {
     private readonly IMongoCollection<User> _usersCollection;
     private readonly JwtSettings _jwtSettings;
+    private readonly JwtTokenService _jwtTokenService;
     public UsersService(
-        IOptions<UserDatabaseSettings> userDatabaseSettings, IOptions<JwtSettings> jwtSettings)
+        IOptions<UserDatabaseSettings> userDatabaseSettings, IOptions<JwtSettings> jwtSettings, JwtTokenService jwtTokenService)
     {
         var mongoClient = new MongoClient(userDatabaseSettings.Value.ConnectionString);
         var mongoDatabase = mongoClient.GetDatabase(userDatabaseSettings.Value.DatabaseName);
         _usersCollection = mongoDatabase.GetCollection<User>(userDatabaseSettings.Value.UsersCollectionName);
         _jwtSettings = jwtSettings.Value;
+        _jwtTokenService = jwtTokenService;
     }
 
     public async Task<List<User>> GetAsync() =>
@@ -124,30 +121,6 @@ public class UsersService
         return user;
     }
 
-    public string GenerateToken(string userId)
-    {
-        var claims = new[]
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, userId),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var token = new JwtSecurityToken(
-            issuer: _jwtSettings.Issuer,
-            audience: _jwtSettings.Audience,
-            claims: claims,
-            expires: DateTime.Now.AddMinutes(_jwtSettings.ExpiryMinutes),
-            signingCredentials: creds
-        );
-
-        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-
-        return tokenString;
-    }
-
     public async Task<List<User>> SearchUsersByName(string query)
     {
         var users = new List<User>();
@@ -204,5 +177,36 @@ public class UsersService
         var result = await _usersCollection.ReplaceOneAsync(x => x.Id == id, user);
 
         return result.IsAcknowledged && result.ModifiedCount > 0;
+    }
+
+    public async Task<bool> UpdateUserRefreshToken(string userId, Auth refreshToken)
+    {
+        var filter = Builders<User>.Filter.Eq(u => u.Id, userId);
+        var update = Builders<User>.Update
+            .Set(u => u.RefreshToken, refreshToken.RefreshToken)
+            .Set(u => u.RefreshTokenExpiresAt, DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiryDays));
+
+        var result = await _usersCollection.UpdateOneAsync(filter, update);
+        return result.IsAcknowledged && result.ModifiedCount > 0;
+    }
+
+    //check for refresh token string among the users in the database
+    public async Task<User> GetUserWithRefreshToken(string refreshToken)
+    {
+        var user = await _usersCollection.Find(x => x.RefreshToken == refreshToken).FirstOrDefaultAsync();
+        return user;
+    }
+
+    public async Task<bool> IsRefreshTokenExpired(string refreshToken)
+    {
+        var user = await GetUserWithRefreshToken(refreshToken);
+
+        // If user not found, or refresh token doesn't exist, or refresh token is expired, return true
+        if (user == null || user.RefreshTokenExpiresAt == null || user.RefreshTokenExpiresAt <= DateTime.UtcNow)
+        {
+            return true;
+        }
+
+        return false;
     }
 }

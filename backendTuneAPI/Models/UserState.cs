@@ -7,5 +7,5 @@ public class UserState
     public string BioText { get; set; } = null!;
     public DateTime? Birthday { get; set; }
     public List<Entry> Entries { get; set; } = new List<Entry>()!;
-    public string JwtToken { get; set; } = null!;
+    public Auth Auth { get; set; } = new Auth();
 }
