@@ -21,7 +21,7 @@ namespace MoodzApi.Controllers
         }
 
         //api endpoint to get a new jwt and refresh token
-        [HttpPost("refresh")]
+        [HttpPut("refresh")]
         public async Task<IActionResult> RefreshToken(RefreshTokenRequest request)
         {
             // Check if AccessToken is still valid
