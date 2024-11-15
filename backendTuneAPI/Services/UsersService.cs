@@ -179,6 +179,19 @@ public class UsersService
         return result.IsAcknowledged && result.ModifiedCount > 0;
     }
 
+    public async Task<bool> UpdateSettingsAsync(string id, Settings settings)
+    {
+        var user = await _usersCollection.Find(user => user.Id == id).FirstOrDefaultAsync();
+
+        if (user == null) return false;
+
+        user.Settings = settings;
+
+        var result = await _usersCollection.ReplaceOneAsync(x => x.Id == id, user);
+
+        return result.IsAcknowledged && result.ModifiedCount > 0;
+    }
+
     public async Task<bool> UpdateUserRefreshToken(string userId, Auth refreshToken)
     {
         var filter = Builders<User>.Filter.Eq(u => u.Id, userId);

@@ -8,4 +8,5 @@ public class UserState
     public DateTime? Birthday { get; set; }
     public List<Entry> Entries { get; set; } = new List<Entry>()!;
     public Auth Auth { get; set; } = new Auth();
+    public Settings Settings { get; set; } = new Settings();
 }

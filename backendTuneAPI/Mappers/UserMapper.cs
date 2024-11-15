@@ -22,7 +22,8 @@ public class UserMapper
             ProfilePicUrl = user.ProfilePicUrl,
             BioText = user.BioText,
             Birthday = user.Birthday,
-            Entries = user.Entries
+            Entries = user.Entries,
+            Settings = user.Settings
         };
     }
     public PublicUserState UserToPublicUserState(User user)

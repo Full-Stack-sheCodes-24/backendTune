@@ -163,4 +163,20 @@ public class UsersController : ControllerBase
         // If the user or entry was not found, return 404 Not Found
         return NotFound();
     }
+
+    [HttpPut("{id:length(24)}/settings")]
+    [Authorize]
+    public async Task<IActionResult> UpdateUserProfile(string id, [FromBody] Settings settings)
+    {
+        // Call the service method to update profile info
+        var success = await _usersService.UpdateSettingsAsync(id, settings);
+
+        if (success)
+        {
+            return Ok();
+        }
+
+        // If the user or entry was not found, return 404 Not Found
+        return NotFound();
+    }
 }
