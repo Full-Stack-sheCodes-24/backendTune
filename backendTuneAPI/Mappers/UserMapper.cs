@@ -38,4 +38,14 @@ public class UserMapper
             Entries = user.Entries
         };
     }
+
+    public PrivateUserState UserToPrivateUserState(User user)
+    {
+        return new PrivateUserState()
+        {
+            Id = user.Id!,
+            Name = user.Name,
+            ProfilePicUrl = user.ProfilePicUrl
+        };
+    }
 }

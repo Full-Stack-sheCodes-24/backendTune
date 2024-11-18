@@ -38,4 +38,5 @@ public class Entry
 public class Settings
 {
     public string? Theme { get; set; }
+    public bool? IsPrivate { get; set; }
 }
