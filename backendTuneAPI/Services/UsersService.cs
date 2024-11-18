@@ -185,7 +185,8 @@ public class UsersService
 
         if (user == null) return false;
 
-        user.Settings = settings;
+        user.Settings.Theme = settings.Theme ?? user.Settings.Theme;
+        user.Settings.IsPrivate = settings.IsPrivate ?? user.Settings.IsPrivate;
 
         var result = await _usersCollection.ReplaceOneAsync(x => x.Id == id, user);
 
