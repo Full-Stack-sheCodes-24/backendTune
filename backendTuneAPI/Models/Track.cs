@@ -6,4 +6,5 @@ public class Track
     public string Href { get; set; } = null!;
     public string Id { get; set; } = null!;
     public string? Preview_url { get; set; } = null!;
+    public string? AlbumImageUrl { get; set; } = null;
 }
