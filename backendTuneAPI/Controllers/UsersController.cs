@@ -75,7 +75,7 @@ public class UsersController : ControllerBase
 
         return Ok();
     }
-    
+
     [HttpGet("{id:length(24)}/entries")]
     [Authorize]
     public async Task<ActionResult<List<Entry>>> GetEntries(string id)
@@ -144,16 +144,14 @@ public class UsersController : ControllerBase
                 if (isPrivate)
                 {
                     userStateResults.Add(_userMapper.UserToPrivateUserState(user!));
-                }
-                else
+                } else
                 {
                     userStateResults.Add(_userMapper.UserToPublicUserState(user!));
                 }
             }
 
             return Ok(userStateResults);
-        }
-        catch (Exception ex)
+        } catch (Exception ex)
         {
             return StatusCode(500, (ex.Message));
         }
@@ -177,7 +175,7 @@ public class UsersController : ControllerBase
 
     [HttpPut("{id:length(24)}/settings")]
     [Authorize]
-    public async Task<IActionResult> UpdateUserProfile(string id, [FromBody] Settings settings)
+    public async Task<IActionResult> UpdateUserSettings(string id, [FromBody] Settings settings)
     {
         // Call the service method to update profile info
         var success = await _usersService.UpdateSettingsAsync(id, settings);
@@ -189,5 +187,23 @@ public class UsersController : ControllerBase
 
         // If the user or entry was not found, return 404 Not Found
         return NotFound();
+    }
+
+    [HttpGet("{id:length(24)}/refresh")]
+    [Authorize]
+    public async Task<IActionResult> GetUserState(string id)
+    {
+        // Call the service method to update profile info
+        var user = await _usersService.GetAsync(id);
+
+        // If the user or entry was not found, return 404 Not Found
+        if (user == null) {
+            return NotFound();
+        }
+
+        // Condense user info to user state to send to frontend
+        UserState userState = _userMapper.UserToUserState(user);
+
+        return Ok(userState);
     }
 }
