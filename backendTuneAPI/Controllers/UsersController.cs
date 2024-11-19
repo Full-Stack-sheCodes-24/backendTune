@@ -4,7 +4,6 @@ using MoodzApi.Services;
 using MoodzApi.Mappers;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
-using MongoDB.Driver;
 
 namespace MoodzApi.Controllers;
 
