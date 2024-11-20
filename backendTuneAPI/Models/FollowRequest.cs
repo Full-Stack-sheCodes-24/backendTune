@@ -1,8 +1,11 @@
-﻿namespace MoodzApi.Models;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+
+namespace MoodzApi.Models;
 public class FollowRequest
 {
-    public string FromUserId { get; set; } = null!;
-    public string ToUserId { get; set; } = null!;
+    public ObjectId FromUserId { get; set; }
+    public ObjectId ToUserId { get; set; }
     public Status Status { get; set; }
 }
 

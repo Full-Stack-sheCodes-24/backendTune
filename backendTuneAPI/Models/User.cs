@@ -18,8 +18,8 @@ public class User
     public DateTime? RefreshTokenExpiresAt { get; set; }
     public string SpotifyId { get; set; } = null!;
     public Settings Settings { get; set; } = new Settings();
-    public List<string> Followers { get; set; } = new List<string>();
-    public List<string> Following { get; set; } = new List<string>();
+    public List<ObjectId> Followers { get; set; } = new List<ObjectId>();
+    public List<ObjectId> Following { get; set; } = new List<ObjectId>();
     public List<FollowRequest> FollowRequests { get; set; } = new List<FollowRequest>();
 }
 

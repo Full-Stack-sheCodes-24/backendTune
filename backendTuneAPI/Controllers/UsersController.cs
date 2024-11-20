@@ -4,6 +4,7 @@ using MoodzApi.Services;
 using MoodzApi.Mappers;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
+using MongoDB.Bson;
 
 namespace MoodzApi.Controllers;
 
@@ -212,7 +213,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> Follow(string id, string toUserId)
     {
         // Call the service method to send a follow
-        var status = await _usersService.Follow(id, toUserId);
+        var status = await _usersService.Follow(new ObjectId(id), new ObjectId(toUserId));
 
         // If successful, return ok
         if (status)
@@ -231,7 +232,7 @@ public class UsersController : ControllerBase
         try
         {
             // Call the service method to send a follow
-            var status = await _usersService.Unfollow(id, toUserId);
+            var status = await _usersService.Unfollow(new ObjectId(id), new ObjectId(toUserId));
 
             // If successful, return ok
             if (status) return Ok();
@@ -250,7 +251,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> AcceptFollowRequest(string id, string otherId)
     {
         // Call the service method to send a follow request
-        var status = await _usersService.AcceptFollowRequest(otherId, id);
+        var status = await _usersService.AcceptFollowRequest(new ObjectId(otherId), new ObjectId(id));
 
         // If successful, return ok
         if (status)
@@ -267,7 +268,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> DeclineFollowRequest(string id, string otherId)
     {
         // Call the service method to send a follow request
-        var status = await _usersService.DeclineFollowRequest(otherId, id);
+        var status = await _usersService.DeclineFollowRequest(new ObjectId(otherId), new ObjectId(id));
 
         // If successful, return ok
         if (status)

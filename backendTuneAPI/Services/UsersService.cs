@@ -2,6 +2,7 @@ using MoodzApi.Models;
 using MongoDB.Driver;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 
 namespace MoodzApi.Services;
 
@@ -224,17 +225,17 @@ public class UsersService
         return false;
     }
 
-    public async Task<bool> Follow(string fromUserId, string toUserId)
+    public async Task<bool> Follow(ObjectId fromUserId, ObjectId toUserId)
     {
-        var toUser = await GetAsync(toUserId);
+        var toUser = await GetAsync(toUserId.ToString());
         // If toUser doesn't exist or already following them, return false
         if (toUser == null || toUser.Followers.Contains(fromUserId)) return false;
         // If a follow request has already been sent, return false
         if (toUser.FollowRequests?.Any(fr => fr.FromUserId == fromUserId && fr.ToUserId == toUserId) ?? false) return false;
 
         var toUserIsPrivate = toUser.Settings?.IsPrivate ?? false;
-        var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId);
-        var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId);
+        var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId.ToString());
+        var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId.ToString());
 
         if (toUserIsPrivate)
         {
@@ -262,14 +263,14 @@ public class UsersService
         }
     }
 
-    public async Task<bool> Unfollow(string fromUserId, string toUserId)
+    public async Task<bool> Unfollow(ObjectId fromUserId, ObjectId toUserId)
     {
-        var toUser = await GetAsync(toUserId);
+        var toUser = await GetAsync(toUserId.ToString());
         // If toUser doesn't exist or not following them, return false
         if (toUser == null || !toUser.Followers.Contains(fromUserId)) return false;
 
-        var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId);
-        var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId);
+        var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId.ToString());
+        var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId.ToString());
 
         var removeFollowing = Builders<User>.Update.Pull(u => u.Following, toUserId);
         var removeFollower = Builders<User>.Update.Pull(u => u.Followers, fromUserId);
@@ -282,10 +283,10 @@ public class UsersService
         return task1.Result.IsAcknowledged && task2.Result.IsAcknowledged && task1.Result.ModifiedCount > 0 && task2.Result.ModifiedCount > 0;
     }
 
-    public async Task<bool> AcceptFollowRequest(string fromUserId, string toUserId)
+    public async Task<bool> AcceptFollowRequest(ObjectId fromUserId, ObjectId toUserId)
     {
-        var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId);
-        var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId);
+        var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId.ToString());
+        var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId.ToString());
 
         // Filter to match the follow request
         var matchRequest = Builders<FollowRequest>.Filter.And(
@@ -308,10 +309,10 @@ public class UsersService
         return task1.Result.IsAcknowledged && task2.Result.IsAcknowledged && task1.Result.ModifiedCount > 0 && task2.Result.ModifiedCount > 0;
     }
 
-    public async Task<bool> DeclineFollowRequest(string fromUserId, string toUserId)
+    public async Task<bool> DeclineFollowRequest(ObjectId fromUserId, ObjectId toUserId)
     {
-        var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId);
-        var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId);
+        var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId.ToString());
+        var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId.ToString());
 
         // Filter to match the follow request
         var matchRequest = Builders<FollowRequest>.Filter.And(

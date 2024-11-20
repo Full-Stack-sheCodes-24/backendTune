@@ -24,8 +24,8 @@ public class UserMapper
             Birthday = user.Birthday,
             Entries = user.Entries,
             Settings = user.Settings,
-            Followers = user.Followers,
-            Following = user.Following,
+            Followers = user.Followers.Select(x => x.ToString()).ToList(),
+            Following = user.Following.Select(x => x.ToString()).ToList(),
             FollowRequests = user.FollowRequests,
         };
     }
@@ -39,8 +39,8 @@ public class UserMapper
             BioText = user.BioText,
             Birthday = user.Birthday,
             Entries = user.Entries,
-            Followers = user.Followers,
-            Following = user.Following
+            Followers = user.Followers.Select(x => x.ToString()).ToList(),
+            Following = user.Following.Select(x => x.ToString()).ToList()
         };
     }
 
@@ -51,8 +51,8 @@ public class UserMapper
             Id = user.Id!,
             Name = user.Name,
             ProfilePicUrl = user.ProfilePicUrl,
-            Followers = user.Followers,
-            Following = user.Following
+            Followers = user.Followers.Select(x => x.ToString()).ToList(),
+            Following = user.Following.Select(x => x.ToString()).ToList()
         };
     }
 }
