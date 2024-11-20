@@ -223,4 +223,110 @@ public class UsersService
 
         return false;
     }
+
+    public async Task<bool> Follow(string fromUserId, string toUserId)
+    {
+        var toUser = await GetAsync(toUserId);
+        // If toUser doesn't exist or already following them, return false
+        if (toUser == null || toUser.Followers.Contains(fromUserId)) return false;
+        // If a follow request has already been sent, return false
+        if (toUser.FollowRequests?.Any(fr => fr.FromUserId == fromUserId && fr.ToUserId == toUserId) ?? false) return false;
+
+        var toUserIsPrivate = toUser.Settings?.IsPrivate ?? false;
+        var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId);
+        var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId);
+
+        if (toUserIsPrivate)
+        {
+            var request = new FollowRequest() { FromUserId = fromUserId, ToUserId = toUserId, Status = Status.Pending };
+            var pushRequest = Builders<User>.Update.Push(u => u.FollowRequests, request);
+
+            // Run both tasks simultaneously 
+            var task1 = _usersCollection.UpdateOneAsync(matchToUser, pushRequest);
+            var task2 = _usersCollection.UpdateOneAsync(matchFromUser, pushRequest);
+            await Task.WhenAll(task1, task2);   // Wait for both to finish before returning
+
+            return task1.Result.IsAcknowledged && task2.Result.IsAcknowledged && task1.Result.ModifiedCount > 0 && task2.Result.ModifiedCount > 0;
+        }
+        else
+        {
+            var pushFollowing = Builders<User>.Update.Push(u => u.Following, toUserId);
+            var pushFollower = Builders<User>.Update.Push(u => u.Followers, fromUserId);
+
+            // Run both tasks simultaneously 
+            var task1 = _usersCollection.UpdateOneAsync(matchFromUser, pushFollowing);
+            var task2 = _usersCollection.UpdateOneAsync(matchToUser, pushFollower);
+            await Task.WhenAll(task1, task2);   // Wait for both to finish before returning
+
+            return task1.Result.IsAcknowledged && task2.Result.IsAcknowledged && task1.Result.ModifiedCount > 0 && task2.Result.ModifiedCount > 0;
+        }
+    }
+
+    public async Task<bool> Unfollow(string fromUserId, string toUserId)
+    {
+        var toUser = await GetAsync(toUserId);
+        // If toUser doesn't exist or not following them, return false
+        if (toUser == null || !toUser.Followers.Contains(fromUserId)) return false;
+
+        var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId);
+        var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId);
+
+        var removeFollowing = Builders<User>.Update.Pull(u => u.Following, toUserId);
+        var removeFollower = Builders<User>.Update.Pull(u => u.Followers, fromUserId);
+
+        // Run both tasks simultaneously 
+        var task1 = _usersCollection.UpdateOneAsync(matchFromUser, removeFollowing);
+        var task2 = _usersCollection.UpdateOneAsync(matchToUser, removeFollower);
+        await Task.WhenAll(task1, task2);   // Wait for both to finish before returning
+
+        return task1.Result.IsAcknowledged && task2.Result.IsAcknowledged && task1.Result.ModifiedCount > 0 && task2.Result.ModifiedCount > 0;
+    }
+
+    public async Task<bool> AcceptFollowRequest(string fromUserId, string toUserId)
+    {
+        var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId);
+        var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId);
+
+        // Filter to match the follow request
+        var matchRequest = Builders<FollowRequest>.Filter.And(
+            Builders<FollowRequest>.Filter.Eq("FromUserId", fromUserId),
+            Builders<FollowRequest>.Filter.Eq("ToUserId", toUserId),
+            Builders<FollowRequest>.Filter.Eq("Status", Status.Pending)
+        );
+        // Remove the follow request from the FollowRequests array
+        var removeRequest = Builders<User>.Update.PullFilter(u => u.FollowRequests, matchRequest);
+
+        // Add Follower/Following to each user
+        var addFollower = removeRequest.Push(u => u.Followers, fromUserId);
+        var addFollowing = removeRequest.Push(u => u.Following, toUserId);
+
+        // Run both tasks simultaenously
+        var task1 = _usersCollection.UpdateOneAsync(matchToUser, addFollower);
+        var task2 = _usersCollection.UpdateOneAsync(matchFromUser, addFollowing);
+        await Task.WhenAll(task1, task2);   // Wait for both to finish before returning
+
+        return task1.Result.IsAcknowledged && task2.Result.IsAcknowledged && task1.Result.ModifiedCount > 0 && task2.Result.ModifiedCount > 0;
+    }
+
+    public async Task<bool> DeclineFollowRequest(string fromUserId, string toUserId)
+    {
+        var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId);
+        var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId);
+
+        // Filter to match the follow request
+        var matchRequest = Builders<FollowRequest>.Filter.And(
+            Builders<FollowRequest>.Filter.Eq("FromUserId", fromUserId),
+            Builders<FollowRequest>.Filter.Eq("ToUserId", toUserId),
+            Builders<FollowRequest>.Filter.Eq("Status", Status.Pending)
+        );
+        // Remove the follow request from the FollowRequests array
+        var removeRequest = Builders<User>.Update.PullFilter(u => u.FollowRequests, matchRequest);
+
+        // Run both tasks simultaenously
+        var task1 = _usersCollection.UpdateOneAsync(matchToUser, removeRequest);
+        var task2 = _usersCollection.UpdateOneAsync(matchFromUser, removeRequest);
+        await Task.WhenAll(task1, task2);   // Wait for both to finish before returning
+
+        return task1.Result.IsAcknowledged && task2.Result.IsAcknowledged && task1.Result.ModifiedCount > 0 && task2.Result.ModifiedCount > 0;
+    }
 }

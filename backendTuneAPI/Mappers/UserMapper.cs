@@ -23,7 +23,10 @@ public class UserMapper
             BioText = user.BioText,
             Birthday = user.Birthday,
             Entries = user.Entries,
-            Settings = user.Settings
+            Settings = user.Settings,
+            Followers = user.Followers,
+            Following = user.Following,
+            FollowRequests = user.FollowRequests,
         };
     }
     public PublicUserState UserToPublicUserState(User user)
@@ -35,7 +38,9 @@ public class UserMapper
             ProfilePicUrl = user.ProfilePicUrl,
             BioText = user.BioText,
             Birthday = user.Birthday,
-            Entries = user.Entries
+            Entries = user.Entries,
+            Followers = user.Followers,
+            Following = user.Following
         };
     }
 
@@ -45,7 +50,9 @@ public class UserMapper
         {
             Id = user.Id!,
             Name = user.Name,
-            ProfilePicUrl = user.ProfilePicUrl
+            ProfilePicUrl = user.ProfilePicUrl,
+            Followers = user.Followers,
+            Following = user.Following
         };
     }
 }

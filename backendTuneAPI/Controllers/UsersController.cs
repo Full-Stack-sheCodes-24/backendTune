@@ -206,4 +206,76 @@ public class UsersController : ControllerBase
 
         return Ok(userState);
     }
+
+    [HttpPut("{id:length(24)}/follow/{toUserId:length(24)}")]
+    [Authorize]
+    public async Task<IActionResult> Follow(string id, string toUserId)
+    {
+        // Call the service method to send a follow
+        var status = await _usersService.Follow(id, toUserId);
+
+        // If successful, return ok
+        if (status)
+        {
+            return Ok();
+        }
+
+        // Else return error
+        return StatusCode(500);
+    }
+
+    [HttpPut("{id:length(24)}/unfollow/{toUserId:length(24)}")]
+    [Authorize]
+    public async Task<IActionResult> Unfollow(string id, string toUserId)
+    {
+        try
+        {
+            // Call the service method to send a follow
+            var status = await _usersService.Unfollow(id, toUserId);
+
+            // If successful, return ok
+            if (status) return Ok();
+        }
+        catch (Exception e)
+        {
+            return StatusCode(500, e);
+        }
+
+        // Else return error
+        return StatusCode(500);
+    }
+
+    [HttpPut("{id:length(24)}/accept/{otherId:length(24)}")]
+    [Authorize]
+    public async Task<IActionResult> AcceptFollowRequest(string id, string otherId)
+    {
+        // Call the service method to send a follow request
+        var status = await _usersService.AcceptFollowRequest(otherId, id);
+
+        // If successful, return ok
+        if (status)
+        {
+            return Ok();
+        }
+
+        // Else return error
+        return StatusCode(500);
+    }
+
+    [HttpPut("{id:length(24)}/decline/{otherId:length(24)}")]
+    [Authorize]
+    public async Task<IActionResult> DeclineFollowRequest(string id, string otherId)
+    {
+        // Call the service method to send a follow request
+        var status = await _usersService.DeclineFollowRequest(otherId, id);
+
+        // If successful, return ok
+        if (status)
+        {
+            return Ok();
+        }
+
+        // Else return error
+        return StatusCode(500);
+    }
 }
