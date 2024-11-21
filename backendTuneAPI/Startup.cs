@@ -78,11 +78,6 @@ namespace MoodzApi
             services.AddSingleton<SpotifyService>();    //Spotify service keeps track of when we need to update auth token
             services.AddSingleton<JwtTokenService>();
 
-            // So that UserContext has access to HttpContextAccessor. HttpContextAccessor allows us to read request information like the jwtToken attached to the request
-            services.AddHttpContextAccessor();
-            // AddScoped means a new instance of this UserContext will be created for every HTTP request. TLDR: Lifespan of UserContext instance is tied to HTTP Request lifespan
-            services.AddScoped<IUserContext, UserContext>();    // Service for reading userId from jwtToken. Can include other things later like isMobile, isTablet, etc.
-
 
             //JSON Serializer
             services.AddControllersWithViews().AddNewtonsoftJson(options =>
