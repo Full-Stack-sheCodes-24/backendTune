@@ -11,6 +11,15 @@ namespace MoodzApi
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
+                })
+                .ConfigureAppConfiguration((context, config) =>
+                {
+                    var env = context.HostingEnvironment;
+
+                    if (env.IsDevelopment())
+                    {
+                        config.AddUserSecrets<Program>();
+                    }
                 });
     }
 }
