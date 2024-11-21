@@ -4,6 +4,7 @@ using MoodzApi.Services;
 using MoodzApi.Mappers;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
+using MongoDB.Bson;
 
 namespace MoodzApi.Controllers;
 
@@ -205,5 +206,77 @@ public class UsersController : ControllerBase
         UserState userState = _userMapper.UserToUserState(user);
 
         return Ok(userState);
+    }
+
+    [HttpPut("{id:length(24)}/follow/{toUserId:length(24)}")]
+    [Authorize]
+    public async Task<IActionResult> Follow(string id, string toUserId)
+    {
+        // Call the service method to send a follow
+        var status = await _usersService.Follow(new ObjectId(id), new ObjectId(toUserId));
+
+        // If successful, return ok
+        if (status)
+        {
+            return Ok();
+        }
+
+        // Else return error
+        return StatusCode(500);
+    }
+
+    [HttpPut("{id:length(24)}/unfollow/{toUserId:length(24)}")]
+    [Authorize]
+    public async Task<IActionResult> Unfollow(string id, string toUserId)
+    {
+        try
+        {
+            // Call the service method to send a follow
+            var status = await _usersService.Unfollow(new ObjectId(id), new ObjectId(toUserId));
+
+            // If successful, return ok
+            if (status) return Ok();
+        }
+        catch (Exception e)
+        {
+            return StatusCode(500, e);
+        }
+
+        // Else return error
+        return StatusCode(500);
+    }
+
+    [HttpPut("{id:length(24)}/accept/{otherId:length(24)}")]
+    [Authorize]
+    public async Task<IActionResult> AcceptFollowRequest(string id, string otherId)
+    {
+        // Call the service method to send a follow request
+        var status = await _usersService.AcceptFollowRequest(new ObjectId(otherId), new ObjectId(id));
+
+        // If successful, return ok
+        if (status)
+        {
+            return Ok();
+        }
+
+        // Else return error
+        return StatusCode(500);
+    }
+
+    [HttpPut("{id:length(24)}/decline/{otherId:length(24)}")]
+    [Authorize]
+    public async Task<IActionResult> DeclineFollowRequest(string id, string otherId)
+    {
+        // Call the service method to send a follow request
+        var status = await _usersService.DeclineFollowRequest(new ObjectId(otherId), new ObjectId(id));
+
+        // If successful, return ok
+        if (status)
+        {
+            return Ok();
+        }
+
+        // Else return error
+        return StatusCode(500);
     }
 }

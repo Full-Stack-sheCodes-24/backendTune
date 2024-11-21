@@ -2,11 +2,13 @@ using MoodzApi.Models;
 using MongoDB.Driver;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 
 namespace MoodzApi.Services;
 
 public class UsersService
 {
+    private readonly IMongoDatabase _database;
     private readonly IMongoCollection<User> _usersCollection;
     private readonly JwtSettings _jwtSettings;
     private readonly JwtTokenService _jwtTokenService;
@@ -14,8 +16,8 @@ public class UsersService
         IOptions<UserDatabaseSettings> userDatabaseSettings, IOptions<JwtSettings> jwtSettings, JwtTokenService jwtTokenService)
     {
         var mongoClient = new MongoClient(userDatabaseSettings.Value.ConnectionString);
-        var mongoDatabase = mongoClient.GetDatabase(userDatabaseSettings.Value.DatabaseName);
-        _usersCollection = mongoDatabase.GetCollection<User>(userDatabaseSettings.Value.UsersCollectionName);
+        _database = mongoClient.GetDatabase(userDatabaseSettings.Value.DatabaseName);
+        _usersCollection = _database.GetCollection<User>(userDatabaseSettings.Value.UsersCollectionName);
         _jwtSettings = jwtSettings.Value;
         _jwtTokenService = jwtTokenService;
     }
@@ -222,5 +224,176 @@ public class UsersService
         }
 
         return false;
+    }
+
+    public async Task<bool> Follow(ObjectId fromUserId, ObjectId toUserId)
+    {
+        var toUser = await GetAsync(toUserId.ToString());
+        // If toUser doesn't exist or already following them, return false
+        if (toUser == null || toUser.Followers.Contains(fromUserId)) return false;
+        // If a follow request has already been sent, return false
+        if (toUser.FollowRequests?.Any(fr => fr.FromUserId == fromUserId && fr.ToUserId == toUserId) ?? false) return false;
+
+        var toUserIsPrivate = toUser.Settings?.IsPrivate ?? false;
+        var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId.ToString());
+        var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId.ToString());
+
+        // using ensures that the session object is disposed of after we are done using it.
+        using var session = await _database.Client.StartSessionAsync();
+        session.StartTransaction();
+        try
+        {
+            if (toUserIsPrivate)
+            {
+                var request = new FollowRequest() { FromUserId = fromUserId, ToUserId = toUserId, Status = Status.Pending };
+                var pushRequest = Builders<User>.Update.Push(u => u.FollowRequests, request);
+
+                // Run both tasks simultaneously 
+                var task1 = _usersCollection.UpdateOneAsync(matchToUser, pushRequest);
+                var task2 = _usersCollection.UpdateOneAsync(matchFromUser, pushRequest);
+                await Task.WhenAll(task1, task2);   // Wait for both to finish before returning
+
+                // If both tasks succeeded, then commit both changes to the database.
+                // This ensures that if an error occurs, there will be no data discrepencies (ex: toUser has a follow request, but fromUser doesn't have a sent follow request)
+                await session.CommitTransactionAsync();
+
+                return task1.Result.IsAcknowledged && task2.Result.IsAcknowledged && task1.Result.ModifiedCount > 0 && task2.Result.ModifiedCount > 0;
+            }
+            else
+            {
+                var pushFollowing = Builders<User>.Update.Push(u => u.Following, toUserId);
+                var pushFollower = Builders<User>.Update.Push(u => u.Followers, fromUserId);
+
+                // Run both tasks simultaneously 
+                var task1 = _usersCollection.UpdateOneAsync(matchFromUser, pushFollowing);
+                var task2 = _usersCollection.UpdateOneAsync(matchToUser, pushFollower);
+                await Task.WhenAll(task1, task2);   // Wait for both to finish before returning
+
+                // If both tasks succeeded, then commit both changes to the database.
+                // This ensures that if an error occurs, there will be no data discrepencies (ex: fromUser is following toUser, but toUser has no fromUser follower)
+                await session.CommitTransactionAsync();
+
+                return task1.Result.IsAcknowledged && task2.Result.IsAcknowledged && task1.Result.ModifiedCount > 0 && task2.Result.ModifiedCount > 0;
+            }
+        }
+        catch (Exception e)
+        {
+            await session.AbortTransactionAsync();
+            Console.WriteLine($"Follow Transaction aborted: {e}");
+            return false;
+        }
+    }
+
+    public async Task<bool> Unfollow(ObjectId fromUserId, ObjectId toUserId)
+    {
+        var toUser = await GetAsync(toUserId.ToString());
+        // If toUser doesn't exist or not following them, return false
+        if (toUser == null || !toUser.Followers.Contains(fromUserId)) return false;
+
+        var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId.ToString());
+        var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId.ToString());
+
+        var removeFollowing = Builders<User>.Update.Pull(u => u.Following, toUserId);
+        var removeFollower = Builders<User>.Update.Pull(u => u.Followers, fromUserId);
+
+        using var session = await _database.Client.StartSessionAsync();
+        session.StartTransaction();
+        try
+        {
+            // Run both tasks simultaneously 
+            var task1 = _usersCollection.UpdateOneAsync(matchFromUser, removeFollowing);
+            var task2 = _usersCollection.UpdateOneAsync(matchToUser, removeFollower);
+            await Task.WhenAll(task1, task2);   // Wait for both to finish before returning
+
+            // If both tasks succeeded, then commit both changes to the database.
+            // This ensures that if an error occurs, there will be no data discrepencies
+            await session.CommitTransactionAsync();
+
+            return task1.Result.IsAcknowledged && task2.Result.IsAcknowledged && task1.Result.ModifiedCount > 0 && task2.Result.ModifiedCount > 0;
+        }
+        catch (Exception e)
+        {
+            await session.AbortTransactionAsync();
+            Console.WriteLine($"Unfollow Transaction aborted: {e}");
+            return false;
+        }
+    }
+
+    public async Task<bool> AcceptFollowRequest(ObjectId fromUserId, ObjectId toUserId)
+    {
+        var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId.ToString());
+        var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId.ToString());
+
+        // Filter to match the follow request
+        var matchRequest = Builders<FollowRequest>.Filter.And(
+            Builders<FollowRequest>.Filter.Eq("FromUserId", fromUserId),
+            Builders<FollowRequest>.Filter.Eq("ToUserId", toUserId),
+            Builders<FollowRequest>.Filter.Eq("Status", Status.Pending)
+        );
+        // Remove the follow request from the FollowRequests array
+        var removeRequest = Builders<User>.Update.PullFilter(u => u.FollowRequests, matchRequest);
+
+        // Add Follower/Following to each user
+        var addFollower = removeRequest.Push(u => u.Followers, fromUserId);
+        var addFollowing = removeRequest.Push(u => u.Following, toUserId);
+
+        using var session = await _database.Client.StartSessionAsync();
+        session.StartTransaction();
+        try
+        {
+            // Run both tasks simultaenously
+            var task1 = _usersCollection.UpdateOneAsync(matchToUser, addFollower);
+            var task2 = _usersCollection.UpdateOneAsync(matchFromUser, addFollowing);
+            await Task.WhenAll(task1, task2);   // Wait for both to finish before returning
+
+            // If both tasks succeeded, then commit both changes to the database.
+            // This ensures that if an error occurs, there will be no data discrepencies
+            await session.CommitTransactionAsync();
+
+            return task1.Result.IsAcknowledged && task2.Result.IsAcknowledged && task1.Result.ModifiedCount > 0 && task2.Result.ModifiedCount > 0;
+        }
+        catch (Exception e)
+        {
+            await session.AbortTransactionAsync();
+            Console.WriteLine($"Accept Follow Request Transaction aborted: {e}");
+            return false;
+        }
+    }
+
+    public async Task<bool> DeclineFollowRequest(ObjectId fromUserId, ObjectId toUserId)
+    {
+        var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId.ToString());
+        var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId.ToString());
+
+        // Filter to match the follow request
+        var matchRequest = Builders<FollowRequest>.Filter.And(
+            Builders<FollowRequest>.Filter.Eq("FromUserId", fromUserId),
+            Builders<FollowRequest>.Filter.Eq("ToUserId", toUserId),
+            Builders<FollowRequest>.Filter.Eq("Status", Status.Pending)
+        );
+        // Remove the follow request from the FollowRequests array
+        var removeRequest = Builders<User>.Update.PullFilter(u => u.FollowRequests, matchRequest);
+
+        using var session = await _database.Client.StartSessionAsync();
+        session.StartTransaction();
+        try
+        {
+            // Run both tasks simultaenously
+            var task1 = _usersCollection.UpdateOneAsync(matchToUser, removeRequest);
+            var task2 = _usersCollection.UpdateOneAsync(matchFromUser, removeRequest);
+            await Task.WhenAll(task1, task2);   // Wait for both to finish before returning
+
+            // If both tasks succeeded, then commit both changes to the database.
+            // This ensures that if an error occurs, there will be no data discrepencies
+            await session.CommitTransactionAsync();
+
+            return task1.Result.IsAcknowledged && task2.Result.IsAcknowledged && task1.Result.ModifiedCount > 0 && task2.Result.ModifiedCount > 0;
+        }
+        catch (Exception e)
+        {
+            await session.AbortTransactionAsync();
+            Console.WriteLine($"Decline Follow Request Transaction aborted: {e}");
+            return false;
+        }
     }
 }
