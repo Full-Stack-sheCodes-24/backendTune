@@ -360,7 +360,7 @@ public class UsersService
         }
     }
 
-    public async Task<bool> DeclineFollowRequest(ObjectId fromUserId, ObjectId toUserId)
+    public async Task<bool> RemoveFollowRequest(ObjectId fromUserId, ObjectId toUserId)
     {
         var matchFromUser = Builders<User>.Filter.Eq(u => u.Id, fromUserId.ToString());
         var matchToUser = Builders<User>.Filter.Eq(u => u.Id, toUserId.ToString());
@@ -368,8 +368,7 @@ public class UsersService
         // Filter to match the follow request
         var matchRequest = Builders<FollowRequest>.Filter.And(
             Builders<FollowRequest>.Filter.Eq("FromUserId", fromUserId),
-            Builders<FollowRequest>.Filter.Eq("ToUserId", toUserId),
-            Builders<FollowRequest>.Filter.Eq("Status", Status.Pending)
+            Builders<FollowRequest>.Filter.Eq("ToUserId", toUserId)
         );
         // Remove the follow request from the FollowRequests array
         var removeRequest = Builders<User>.Update.PullFilter(u => u.FollowRequests, matchRequest);

@@ -250,7 +250,7 @@ public class UsersController : ControllerBase
     [Authorize]
     public async Task<IActionResult> AcceptFollowRequest(string id, string otherId)
     {
-        // Call the service method to send a follow request
+        // Call the service method to accept a follow request
         var status = await _usersService.AcceptFollowRequest(new ObjectId(otherId), new ObjectId(id));
 
         // If successful, return ok
@@ -267,8 +267,27 @@ public class UsersController : ControllerBase
     [Authorize]
     public async Task<IActionResult> DeclineFollowRequest(string id, string otherId)
     {
-        // Call the service method to send a follow request
-        var status = await _usersService.DeclineFollowRequest(new ObjectId(otherId), new ObjectId(id));
+        // Call the service method to remove a follow request
+        // Swap id and otherId since we are declining a request, the matched follow request fields should be flipped with the id's
+        // fromUserId should be otherId, toUserId should be from the owner of the account
+        var status = await _usersService.RemoveFollowRequest(new ObjectId(otherId), new ObjectId(id));
+
+        // If successful, return ok
+        if (status)
+        {
+            return Ok();
+        }
+
+        // Else return error
+        return StatusCode(500);
+    }
+
+    [HttpPut("{id:length(24)}/unrequest/{otherId:length(24)}")]
+    [Authorize]
+    public async Task<IActionResult> Unrequest(string id, string otherId)
+    {
+        // Call the service method to remove a follow request
+        var status = await _usersService.RemoveFollowRequest(new ObjectId(id), new ObjectId(otherId));
 
         // If successful, return ok
         if (status)
