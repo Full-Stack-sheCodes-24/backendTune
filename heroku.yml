@@ -1,0 +1,5 @@
+build:
+  docker:
+    web: ./backendTuneAPI/Dockerfile
+run:
+  web: dotnet MoodzAPI.dll
