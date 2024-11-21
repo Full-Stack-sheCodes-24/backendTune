@@ -6,7 +6,6 @@ EXPOSE 8080
 # Build stage
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
-ENV DOTNET_SECRETS=C:\Users\human being\AppData\Roaming\Microsoft\UserSecrets\ce367f95-58c1-4a16-b146-e1f6a0015c05
 WORKDIR /src
 COPY ["MoodzApi.csproj", "."]
 RUN dotnet restore "./MoodzApi.csproj"
