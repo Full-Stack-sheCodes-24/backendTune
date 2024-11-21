@@ -1,8 +1,5 @@
 # Base runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-ARG APP_UID=1001
-RUN adduser --disabled-password --uid $APP_UID appuser
-USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 
