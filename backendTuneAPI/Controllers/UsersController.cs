@@ -14,13 +14,11 @@ public class UsersController : ControllerBase
 {
     private readonly UsersService _usersService;
     private readonly UserMapper _userMapper;
-    private readonly IUserContext _userContext;
     private const string EMAIL_RE = @"\A(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)\Z";
-    public UsersController(UsersService usersService, IUserContext userContext)
+    public UsersController(UsersService usersService)
     {
         _usersService = usersService;
         _userMapper = new UserMapper(); // Note: should try to update DI Injection Container to all Mappers to be singletons, but this is fine for now
-        _userContext = userContext;
     }
 
     [HttpGet]
@@ -79,12 +77,10 @@ public class UsersController : ControllerBase
         return Ok();
     }
 
-    [HttpGet("entries")]
+    [HttpGet("{id:length(24)}/entries")]
     [Authorize]
-    public async Task<ActionResult<List<Entry>>> GetEntries()
+    public async Task<ActionResult<List<Entry>>> GetEntries(string id)
     {
-        var id = _userContext.UserId;
-
         // Fetch all entries for the specified userId
         var entries = await _usersService.GetEntriesByUserIdAsync(id);
 
@@ -98,12 +94,10 @@ public class UsersController : ControllerBase
         return Ok(entries);
     }
 
-    [HttpPost("entries")]
+    [HttpPost("{id:length(24)}/entries")]
     [Authorize]
-    public async Task<ActionResult> AddEntry(Entry newEntry)
+    public async Task<ActionResult> AddEntry(string id, Entry newEntry)
     {
-        var id = _userContext.UserId;
-
         // Call the service method to add the entry
         var success = await _usersService.AddEntryToUserAsync(id, newEntry);
 
@@ -117,12 +111,10 @@ public class UsersController : ControllerBase
         return NotFound();
     }
 
-    [HttpDelete("entries/{date}")]
+    [HttpDelete("{id:length(24)}/entries/{date}")]
     [Authorize]
-    public async Task<ActionResult> DeleteEntry(DateTime date)
+    public async Task<ActionResult> DeleteEntry(string id, DateTime date)
     {
-        var id = _userContext.UserId;
-
         // Call the service method to delete the entry
         var success = await _usersService.DeleteEntryByDateAsync(id, date);
 
@@ -166,12 +158,10 @@ public class UsersController : ControllerBase
         }
     }
 
-    [HttpPut("profile")]
+    [HttpPut("{id:length(24)}/profile")]
     [Authorize]
-    public async Task<IActionResult> UpdateUserProfile([FromBody] ProfileInfo profileInfo)
+    public async Task<IActionResult> UpdateUserProfile(string id, [FromBody] ProfileInfo profileInfo)
     {
-        var id = _userContext.UserId;
-
         // Call the service method to update profile info
         var success = await _usersService.UpdateProfileInfoAsync(id, profileInfo);
 
@@ -184,12 +174,10 @@ public class UsersController : ControllerBase
         return NotFound();
     }
 
-    [HttpPut("settings")]
+    [HttpPut("{id:length(24)}/settings")]
     [Authorize]
-    public async Task<IActionResult> UpdateUserSettings([FromBody] Settings settings)
+    public async Task<IActionResult> UpdateUserSettings(string id, [FromBody] Settings settings)
     {
-        var id = _userContext.UserId;
-
         // Call the service method to update profile info
         var success = await _usersService.UpdateSettingsAsync(id, settings);
 
@@ -202,12 +190,10 @@ public class UsersController : ControllerBase
         return NotFound();
     }
 
-    [HttpGet("refresh")]
+    [HttpGet("{id:length(24)}/refresh")]
     [Authorize]
-    public async Task<IActionResult> GetUserState()
+    public async Task<IActionResult> GetUserState(string id)
     {
-        var id = _userContext.UserId;
-
         // Call the service method to update profile info
         var user = await _usersService.GetAsync(id);
 
@@ -222,12 +208,10 @@ public class UsersController : ControllerBase
         return Ok(userState);
     }
 
-    [HttpPut("follow/{toUserId:length(24)}")]
+    [HttpPut("{id:length(24)}/follow/{toUserId:length(24)}")]
     [Authorize]
-    public async Task<IActionResult> Follow(string toUserId)
+    public async Task<IActionResult> Follow(string id, string toUserId)
     {
-        var id = _userContext.UserId;
-
         // Call the service method to send a follow
         var status = await _usersService.Follow(new ObjectId(id), new ObjectId(toUserId));
 
@@ -241,12 +225,10 @@ public class UsersController : ControllerBase
         return StatusCode(500);
     }
 
-    [HttpPut("unfollow/{toUserId:length(24)}")]
+    [HttpPut("{id:length(24)}/unfollow/{toUserId:length(24)}")]
     [Authorize]
-    public async Task<IActionResult> Unfollow(string toUserId)
+    public async Task<IActionResult> Unfollow(string id, string toUserId)
     {
-        var id = _userContext.UserId;
-
         try
         {
             // Call the service method to send a follow
@@ -264,12 +246,10 @@ public class UsersController : ControllerBase
         return StatusCode(500);
     }
 
-    [HttpPut("accept/{otherId:length(24)}")]
+    [HttpPut("{id:length(24)}/accept/{otherId:length(24)}")]
     [Authorize]
-    public async Task<IActionResult> AcceptFollowRequest(string otherId)
+    public async Task<IActionResult> AcceptFollowRequest(string id, string otherId)
     {
-        var id = _userContext.UserId;
-
         // Call the service method to accept a follow request
         var status = await _usersService.AcceptFollowRequest(new ObjectId(otherId), new ObjectId(id));
 
@@ -283,12 +263,10 @@ public class UsersController : ControllerBase
         return StatusCode(500);
     }
 
-    [HttpPut("decline/{otherId:length(24)}")]
+    [HttpPut("{id:length(24)}/decline/{otherId:length(24)}")]
     [Authorize]
-    public async Task<IActionResult> DeclineFollowRequest(string otherId)
+    public async Task<IActionResult> DeclineFollowRequest(string id, string otherId)
     {
-        var id = _userContext.UserId;
-
         // Call the service method to remove a follow request
         // Swap id and otherId since we are declining a request, the matched follow request fields should be flipped with the id's
         // fromUserId should be otherId, toUserId should be from the owner of the account
@@ -304,12 +282,10 @@ public class UsersController : ControllerBase
         return StatusCode(500);
     }
 
-    [HttpPut("unrequest/{otherId:length(24)}")]
+    [HttpPut("{id:length(24)}/unrequest/{otherId:length(24)}")]
     [Authorize]
-    public async Task<IActionResult> Unrequest( string otherId)
+    public async Task<IActionResult> Unrequest(string id, string otherId)
     {
-        var id = _userContext.UserId;
-
         // Call the service method to remove a follow request
         var status = await _usersService.RemoveFollowRequest(new ObjectId(id), new ObjectId(otherId));
 
