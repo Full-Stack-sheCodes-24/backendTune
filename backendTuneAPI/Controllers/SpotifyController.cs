@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MoodzApi.Models;
 using MoodzApi.Services;
 
 namespace MoodzApi.Controllers;
@@ -10,8 +9,12 @@ namespace MoodzApi.Controllers;
 public class SpotifyController : ControllerBase
 {
     private readonly SpotifyService _spotifyService;
-    public SpotifyController(SpotifyService spotifyService) =>
+    private readonly IUserContext _userContext;
+    public SpotifyController(SpotifyService spotifyService, IUserContext userContext)
+    {
         _spotifyService = spotifyService;
+        _userContext = userContext;
+    }
 
     [HttpGet("search")]
     [Authorize]
@@ -27,10 +30,12 @@ public class SpotifyController : ControllerBase
         }
     }
 
-    [HttpGet("search/v2/{userId}")]
+    [HttpGet("search/v2")]
     [Authorize]
-    public async Task<IActionResult> SearchSpotifyTracksWithUserAccessToken([FromQuery] string query, string userId)
+    public async Task<IActionResult> SearchSpotifyTracksWithUserAccessToken([FromQuery] string query)
     {
+        var userId = _userContext.UserId;
+
         if (string.IsNullOrWhiteSpace(query) || query.Length > 256) return BadRequest("Query must be between 1 and 256 characters.");
 
         try
@@ -44,10 +49,12 @@ public class SpotifyController : ControllerBase
         }
     }
 
-    [HttpGet("track/{trackId}/{userId}")]
+    [HttpGet("track/{trackId}")]
     [Authorize]
-    public async Task<IActionResult> GetTrack(string trackId, string userId)
+    public async Task<IActionResult> GetTrack(string trackId)
     {
+        var userId = _userContext.UserId;
+
         try
         {
             var track = await _spotifyService.GetTrack(trackId, userId);
@@ -81,10 +88,12 @@ public class SpotifyController : ControllerBase
 
     //get api endpoint to request most recently played tracks
 
-    [HttpGet("recently-played/{userId}")]
+    [HttpGet("recently-played")]
     [Authorize]
-    public async Task<IActionResult> GetRecentlyPlayed(string userId)
+    public async Task<IActionResult> GetRecentlyPlayed()
     {
+        var userId = _userContext.UserId;
+
         try
         {
             // Call the service to get the most recent track
