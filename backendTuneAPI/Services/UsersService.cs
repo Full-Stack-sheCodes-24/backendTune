@@ -497,10 +497,4 @@ public class UsersService
     {
         await _feedsCollection.DeleteOneAsync(x => x.Id == id);
     }
-
-    // Invalidate cached feed for user
-    private async void InvalidateCacheFeed(ObjectId id)
-    {
-        await _feedsCollection.DeleteOneAsync(x => x.Id == id);
-    }
 }
