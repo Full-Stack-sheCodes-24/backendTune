@@ -463,8 +463,8 @@ public class UsersService
             Expiration = DateTime.UtcNow.AddMinutes(_cachedFeedExpirationMinutes),
             Feed = result.Select(entry => new FeedEntry
             {
-                // Cache feed without profile pic, since profile pics take up a lot of memory right now
                 Id = entry.Id,
+                ProfilePicUrl = entry.ProfilePicUrl,
                 Name = entry.Name,
                 Text = entry.Text,
                 Likes = entry.Likes,
@@ -489,61 +489,7 @@ public class UsersService
             return null;
         }
 
-        // Append profilePicUrls
-        var pipeline = new[]
-        {
-            new BsonDocument("$match", new BsonDocument("_id", id)),
-
-            new BsonDocument("$unset", "_id"),
-
-            new BsonDocument("$unwind", new BsonDocument
-            (
-                "path", "$Feed"
-            )),
-
-            new BsonDocument("$lookup", new BsonDocument
-            {
-                { "from", "users" },
-                { "localField", "Feed._id" },
-                { "foreignField", "_id" },
-                { "as", "userInfo" }
-            }),
-
-            new BsonDocument("$unwind", new BsonDocument(
-                "path", "$userInfo"
-            )),
-
-            new BsonDocument("$set", new BsonDocument("Feed.ProfilePicUrl", "$userInfo.ProfilePicUrl")),
-
-            new BsonDocument("$unset", "userInfo"),
-
-            new BsonDocument("$unset", "Expiration"),
-
-            new BsonDocument("$unwind", new BsonDocument(
-                "path", "$Feed"
-            )),
-
-            new BsonDocument("$replaceRoot", new BsonDocument
-            {
-                { "newRoot", new BsonDocument("$mergeObjects", new BsonArray
-                    {
-                        "$Feed", // Fields inside the "Feed" object
-                        "$$ROOT" // The original object
-                    })
-                }
-            }),
-
-            new BsonDocument("$project", new BsonDocument
-            {
-                { "Feed", 0 } // Optionally remove the original "Feed" field if still present
-            })
-
-        };
-
-        // Run the aggregation pipeline
-        var result = await _feedsCollection.Aggregate<FeedEntry>(pipeline).ToListAsync();
-
-        return result;
+        return cachedFeed.Feed;
     }
 
     // Invalidate cached feed for user
