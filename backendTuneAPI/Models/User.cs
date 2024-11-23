@@ -36,6 +36,8 @@ public class Entry
     public int Likes { get; set; } = default!;
     public Track Track { get; set; } = null!;
     public DateTime? Date { get; set; } = null!;
+    [BsonElement("isPinned")]
+    public bool? IsPinned { get; set; }
 }
 
 public class Settings
