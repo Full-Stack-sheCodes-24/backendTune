@@ -275,6 +275,9 @@ public class UsersService
                 // This ensures that if an error occurs, there will be no data discrepencies (ex: fromUser is following toUser, but toUser has no fromUser follower)
                 await session.CommitTransactionAsync();
 
+                // Invalidate cached feed for fromUserId since they now have +1 following
+                InvalidateCacheFeed(fromUserId);
+
                 return task1.Result.IsAcknowledged && task2.Result.IsAcknowledged && task1.Result.ModifiedCount > 0 && task2.Result.ModifiedCount > 0;
             }
         }
@@ -310,6 +313,9 @@ public class UsersService
             // If both tasks succeeded, then commit both changes to the database.
             // This ensures that if an error occurs, there will be no data discrepencies
             await session.CommitTransactionAsync();
+
+            // Invalidate cached feed for fromUserId since they now have -1 following
+            InvalidateCacheFeed(fromUserId);
 
             return task1.Result.IsAcknowledged && task2.Result.IsAcknowledged && task1.Result.ModifiedCount > 0 && task2.Result.ModifiedCount > 0;
         }
@@ -351,6 +357,9 @@ public class UsersService
             // If both tasks succeeded, then commit both changes to the database.
             // This ensures that if an error occurs, there will be no data discrepencies
             await session.CommitTransactionAsync();
+
+            // Invalidate cached feed for fromUserId since they now have +1 following
+            InvalidateCacheFeed(fromUserId);
 
             return task1.Result.IsAcknowledged && task2.Result.IsAcknowledged && task1.Result.ModifiedCount > 0 && task2.Result.ModifiedCount > 0;
         }
@@ -535,5 +544,11 @@ public class UsersService
         var result = await _feedsCollection.Aggregate<FeedEntry>(pipeline).ToListAsync();
 
         return result;
+    }
+
+    // Invalidate cached feed for user
+    private async void InvalidateCacheFeed(ObjectId id)
+    {
+        await _feedsCollection.DeleteOneAsync(x => x.Id == id);
     }
 }
