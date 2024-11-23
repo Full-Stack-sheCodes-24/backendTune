@@ -2,7 +2,7 @@ using MoodzApi.Models;
 using MongoDB.Driver;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
+using System.Collections.Generic;
 
 namespace MoodzApi.Services;
 
@@ -10,16 +10,18 @@ public class UsersService
 {
     private readonly IMongoDatabase _database;
     private readonly IMongoCollection<User> _usersCollection;
+    private readonly IMongoCollection<CachedFeed> _feedsCollection;
     private readonly JwtSettings _jwtSettings;
-    private readonly JwtTokenService _jwtTokenService;
+    private readonly int _cachedFeedExpirationMinutes;
     public UsersService(
-        IOptions<UserDatabaseSettings> userDatabaseSettings, IOptions<JwtSettings> jwtSettings, JwtTokenService jwtTokenService)
+        IOptions<UserDatabaseSettings> userDatabaseSettings, IOptions<JwtSettings> jwtSettings)
     {
         var mongoClient = new MongoClient(userDatabaseSettings.Value.ConnectionString);
         _database = mongoClient.GetDatabase(userDatabaseSettings.Value.DatabaseName);
         _usersCollection = _database.GetCollection<User>(userDatabaseSettings.Value.UsersCollectionName);
+        _feedsCollection = _database.GetCollection<CachedFeed>(userDatabaseSettings.Value.FeedsCollectionName);
+        _cachedFeedExpirationMinutes = userDatabaseSettings.Value.CachedFeedExpirationMinutes;
         _jwtSettings = jwtSettings.Value;
-        _jwtTokenService = jwtTokenService;
     }
 
     public async Task<List<User>> GetAsync() =>
@@ -394,5 +396,144 @@ public class UsersService
             Console.WriteLine($"Decline Follow Request Transaction aborted: {e}");
             return false;
         }
+    }
+
+    public async Task<List<FeedEntry>> GetFeedAsync(ObjectId currentUserId, int limit = 50)
+    {
+        // Check if cache of feed exists, if null is returned proceed to generate a new feed
+        var cachedFeed = await GetCachedFeed(currentUserId);
+        if (cachedFeed != null) return cachedFeed;
+
+        var pipeline = new[]
+        {
+            // Match the current user
+            new BsonDocument("$match", new BsonDocument("_id", currentUserId)),
+
+            // Unwind the "following" array, basically spreads out the following array so that only one entry is in each document
+            new BsonDocument("$unwind", "$Following"),
+
+            // Match the followed users with their user documents
+            new BsonDocument("$lookup", new BsonDocument
+            {
+                { "from", "users" },  // Join with the "users" collection
+                { "localField", "Following" },  // following field should just be the followed user's ObjectId after unwinding
+                { "foreignField", "_id" },  // Match the followed user's ObjectId with the ObjectId of their user document
+                { "as", "FollowedUser" }    // Output the user document as followerUser field
+            }),
+
+            new BsonDocument("$unwind", "$FollowedUser"), // Unwind FollowedUser to be a field instead of array
+            new BsonDocument("$unwind", "$FollowedUser.Entries"), // Unwind each user's entries
+
+            new BsonDocument("$unset", "_id"),   // Remove original id
+
+            // Extract only the fields needed for the feed
+            new BsonDocument("$project", new BsonDocument
+            {
+                { "_id", "$FollowedUser._id" }, // Replace with entry owner id
+                { "Name", "$FollowedUser.Name" },
+                { "ProfilePicUrl", "$FollowedUser.ProfilePicUrl" },
+                { "Text", "$FollowedUser.Entries.Text" },
+                { "Likes", "$FollowedUser.Entries.Likes" },
+                { "Track", "$FollowedUser.Entries.Track" },
+                { "Date", "$FollowedUser.Entries.Date" }
+            }),
+
+            // Sort the entries by date in descending order
+            new BsonDocument("$sort", new BsonDocument("Date", -1)),
+
+            // Limit the result to the most recent N entries
+            new BsonDocument("$limit", limit)
+        };
+
+        // Run the aggregation pipeline
+        var result = await _usersCollection.Aggregate<FeedEntry>(pipeline).ToListAsync();
+
+        var newCachedFeed = new CachedFeed()
+        {
+            Id = currentUserId,
+            Expiration = DateTime.UtcNow.AddMinutes(_cachedFeedExpirationMinutes),
+            Feed = result.Select(entry => new FeedEntry
+            {
+                // Cache feed without profile pic, since profile pics take up a lot of memory right now
+                Id = entry.Id,
+                Name = entry.Name,
+                Text = entry.Text,
+                Likes = entry.Likes,
+                Track = entry.Track,
+                Date = entry.Date
+            }).ToList()
+        };
+
+        // Store new cached feed 
+        await _feedsCollection.ReplaceOneAsync(x => x.Id == currentUserId, newCachedFeed, new ReplaceOptions { IsUpsert = true });
+
+        return result;
+    }
+
+    private async Task<List<FeedEntry>?> GetCachedFeed(ObjectId id)
+    {
+        var cachedFeed = await _feedsCollection.Find<CachedFeed>(x => x.Id == id).FirstOrDefaultAsync();
+
+        // if cachedFeed doesn't exist or if expired, return null
+        if (cachedFeed == null || cachedFeed.Expiration < DateTime.UtcNow)
+        {
+            return null;
+        }
+
+        // Append profilePicUrls
+        var pipeline = new[]
+        {
+            new BsonDocument("$match", new BsonDocument("_id", id)),
+
+            new BsonDocument("$unset", "_id"),
+
+            new BsonDocument("$unwind", new BsonDocument
+            (
+                "path", "$Feed"
+            )),
+
+            new BsonDocument("$lookup", new BsonDocument
+            {
+                { "from", "users" },
+                { "localField", "Feed._id" },
+                { "foreignField", "_id" },
+                { "as", "userInfo" }
+            }),
+
+            new BsonDocument("$unwind", new BsonDocument(
+                "path", "$userInfo"
+            )),
+
+            new BsonDocument("$set", new BsonDocument("Feed.ProfilePicUrl", "$userInfo.ProfilePicUrl")),
+
+            new BsonDocument("$unset", "userInfo"),
+
+            new BsonDocument("$unset", "Expiration"),
+
+            new BsonDocument("$unwind", new BsonDocument(
+                "path", "$Feed"
+            )),
+
+            new BsonDocument("$replaceRoot", new BsonDocument
+            {
+                { "newRoot", new BsonDocument("$mergeObjects", new BsonArray
+                    {
+                        "$Feed", // Fields inside the "Feed" object
+                        "$$ROOT" // The original object
+                    })
+                }
+            }),
+
+            new BsonDocument("$project", new BsonDocument
+            {
+                { "Feed", 0 } // Optionally remove the original "Feed" field if still present
+            })
+
+        };
+
+        // Run the aggregation pipeline
+        var result = await _feedsCollection.Aggregate<FeedEntry>(pipeline).ToListAsync();
+
+        return result;
     }
 }

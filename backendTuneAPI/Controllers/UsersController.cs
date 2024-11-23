@@ -322,4 +322,23 @@ public class UsersController : ControllerBase
         // Else return error
         return StatusCode(500);
     }
+
+    [HttpGet("feed")]
+    [Authorize]
+    public async Task<IActionResult> Feed()
+    {
+        var id = _userContext.UserId;
+
+        // Call the service method to fetch feed
+        var feed = await _usersService.GetFeedAsync(ObjectId.Parse(id));
+
+        // If successful, return ok
+        if (feed != null && feed.Count > 0)
+        {
+            return Ok(feed);
+        }
+
+        // Else return error
+        return StatusCode(500);
+    }
 }
