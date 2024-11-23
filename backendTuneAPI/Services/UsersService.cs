@@ -3,6 +3,7 @@ using MongoDB.Driver;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
+using Newtonsoft.Json;
 
 namespace MoodzApi.Services;
 
@@ -394,5 +395,54 @@ public class UsersService
             Console.WriteLine($"Decline Follow Request Transaction aborted: {e}");
             return false;
         }
+    }
+
+    public async Task<List<FeedEntry>> GetFeedAsync(ObjectId currentUserId, int limit = 50)
+    {
+        var pipeline = new[]
+        {
+            // Match the current user
+            new BsonDocument("$match", new BsonDocument("_id", currentUserId)),
+
+            // Unwind the "following" array, basically spreads out the following array so that only one entry is in each document
+            new BsonDocument("$unwind", "$Following"),
+
+            // Match the followed users with their user documents
+            new BsonDocument("$lookup", new BsonDocument
+            {
+                { "from", "users" },  // Join with the "users" collection
+                { "localField", "Following" },  // following field should just be the followed user's ObjectId after unwinding
+                { "foreignField", "_id" },  // Match the followed user's ObjectId with the ObjectId of their user document
+                { "as", "FollowedUser" }    // Output the user document as followerUser field
+            }),
+
+            new BsonDocument("$unwind", "$FollowedUser"), // Unwind FollowedUser to be a field instead of array
+            new BsonDocument("$unwind", "$FollowedUser.Entries"), // Unwind each user's entries
+
+            new BsonDocument("$unset", "_id"),   // Remove original id
+
+            // Extract only the fields needed for the feed
+            new BsonDocument("$project", new BsonDocument
+            {
+                { "_id", "$FollowedUser._id" }, // Replace with entry owner id
+                { "Name", "$FollowedUser.Name" },
+                { "ProfilePicUrl", "$FollowedUser.ProfilePicUrl" },
+                { "Text", "$FollowedUser.Entries.Text" },
+                { "Likes", "$FollowedUser.Entries.Likes" },
+                { "Track", "$FollowedUser.Entries.Track" },
+                { "Date", "$FollowedUser.Entries.Date" }
+            }),
+
+            // Sort the entries by date in descending order
+            new BsonDocument("$sort", new BsonDocument("Date", -1)),
+
+            // Limit the result to the most recent N entries
+            new BsonDocument("$limit", limit)
+        };
+
+        // Run the aggregation pipeline
+        var result = await _usersCollection.Aggregate<FeedEntry>(pipeline).ToListAsync();
+
+        return result;
     }
 }
