@@ -136,7 +136,7 @@ public class UsersController : ControllerBase
         return NotFound();
     }
 
-    [HttpPut("entries/{date}")]
+    [HttpPut("entries")]
     [Authorize]
     public async Task<ActionResult> UpdateEntry(Entry updatedEntry)
     {
