@@ -91,6 +91,28 @@ public class UsersService
         return updateResult.ModifiedCount > 0;
     }
 
+    public async Task<bool> UpdateEntryByDateAsync(string id, Entry updatedEntry)
+    {
+        // Define the filter to match the specific entry by date string
+        var filter = Builders<User>.Filter.And(
+            Builders<User>.Filter.Eq(x => x.Id, id),
+            Builders<User>.Filter.ElemMatch(x => x.Entries, entry => entry.Date == updatedEntry.Date)
+        );
+
+        // Define the update to remove the entry with the specified date
+        var update = Builders<User>.Update.Combine(
+            Builders<User>.Update.Set("Entries.$.Track", updatedEntry.Text),
+            Builders<User>.Update.Set("Entries.$.Track", updatedEntry.Track),
+            Builders<User>.Update.Set("Entries.$.IsPinned", updatedEntry.IsPinned)
+        );
+
+        // Perform the update
+        var updateResult = await _usersCollection.UpdateOneAsync(filter, update);
+
+        // Return true if an entry was edited, false otherwise
+        return updateResult.ModifiedCount > 0;
+    }
+
     public async Task<bool> UpdateSpotifyAccessToken(string userId, SpotifyUserAccessToken token) {
         // Find the user by ID
         var user = await _usersCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();

@@ -136,6 +136,24 @@ public class UsersController : ControllerBase
         return NotFound();
     }
 
+    [HttpPut("entries/{date}")]
+    [Authorize]
+    public async Task<ActionResult> UpdateEntry(Entry updatedEntry)
+    {
+        var id = _userContext.UserId;
+
+        var success = await _usersService.UpdateEntryByDateAsync(id, updatedEntry); 
+
+         // Return 204 No Content if the entry was updated
+        if (success)
+        {
+            return NoContent();
+        }
+
+        // If the user or entry was not found, return 404 Not Found
+        return NotFound();
+    }
+
     [HttpGet("search")]
     public async Task<ActionResult<List<OtherUserState>>> SearchUsersByName([FromQuery] string query)
     {
