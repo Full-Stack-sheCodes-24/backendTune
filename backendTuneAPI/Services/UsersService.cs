@@ -418,6 +418,13 @@ public class UsersService
             // Match the current user
             new BsonDocument("$match", new BsonDocument("_id", currentUserId)),
 
+            // Add the user's own _id to the Following array to include user's own entries in feed
+            new BsonDocument("$addFields", new BsonDocument("Following",
+                new BsonDocument("$concatArrays", new BsonArray {
+                    "$Following", new BsonArray { currentUserId }
+                })
+            )),
+
             // Unwind the "following" array, basically spreads out the following array so that only one entry is in each document
             new BsonDocument("$unwind", "$Following"),
 
