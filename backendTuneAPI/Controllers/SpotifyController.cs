@@ -16,6 +16,7 @@ public class SpotifyController : ControllerBase
         _userContext = userContext;
     }
 
+    // Endpoint used to search for tracks using the server's accest token
     [HttpGet("search")]
     [Authorize]
     public async Task<IActionResult> SearchSpotifyTracks([FromQuery] string query)
@@ -30,6 +31,7 @@ public class SpotifyController : ControllerBase
         }
     }
 
+    // Endpoint used to search for tracks using a user's access token
     [HttpGet("search/v2")]
     [Authorize]
     public async Task<IActionResult> SearchSpotifyTracksWithUserAccessToken([FromQuery] string query)
@@ -49,6 +51,7 @@ public class SpotifyController : ControllerBase
         }
     }
 
+    // Endpoint used for getting track information
     [HttpGet("track/{trackId}")]
     [Authorize]
     public async Task<IActionResult> GetTrack(string trackId)
@@ -86,8 +89,7 @@ public class SpotifyController : ControllerBase
 
     // }
 
-    //get api endpoint to request most recently played tracks
-
+    // Get api endpoint to request most recently played tracks
     [HttpGet("recently-played")]
     [Authorize]
     public async Task<IActionResult> GetRecentlyPlayed()
@@ -109,6 +111,7 @@ public class SpotifyController : ControllerBase
         }
     }
 
+    // Endpoint for logging in a user based on spotify's authcode
     [HttpGet("login/{authCode}")]
     public async Task<IActionResult> SpotifyUserLogin(string authCode)
     {

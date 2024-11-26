@@ -23,10 +23,12 @@ public class UsersController : ControllerBase
         _userContext = userContext;
     }
 
-    [HttpGet]
-    public async Task<List<User>> Get() =>
-        await _usersService.GetAsync();
+    // Gets all users from database (for testing)
+    //[HttpGet]
+    //public async Task<List<User>> Get() =>
+    //    await _usersService.GetAsync();
 
+    // Get a user's public state by their id (used by frontend's user profile page)
     [HttpGet("{id:length(24)}")]
     public async Task<ActionResult<OtherUserState>> Get(string id)
     {
@@ -40,32 +42,35 @@ public class UsersController : ControllerBase
         return Ok(_userMapper.UserToPublicUserState(user!));
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Post(UserCreateRequest request)
-    {
-        if (!Regex.IsMatch(request.Email, EMAIL_RE)) return BadRequest($"{request.Email} is not a valid email");
+    // Create a user in the database (for testing)
+    //[HttpPost]
+    //public async Task<IActionResult> Post(UserCreateRequest request)
+    //{
+    //    if (!Regex.IsMatch(request.Email, EMAIL_RE)) return BadRequest($"{request.Email} is not a valid email");
 
-        var createdUser = await _usersService.CreateAsync(_userMapper.UserCreateRequestToUser(request));
-        if (createdUser?.Id is null) return NoContent();
+    //    var createdUser = await _usersService.CreateAsync(_userMapper.UserCreateRequestToUser(request));
+    //    if (createdUser?.Id is null) return NoContent();
 
-        return CreatedAtAction(nameof(Get), new { id = createdUser.Id }, createdUser);  // Returns a response header with key value pair: "location": "base_url/api/Users/createdUser.Id"
-    }
+    //    return CreatedAtAction(nameof(Get), new { id = createdUser.Id }, createdUser);  // Returns a response header with key value pair: "location": "base_url/api/Users/createdUser.Id"
+    //}
 
-    [HttpPut]
-    public async Task<IActionResult> Update(User updatedUser)
-    {
-        if (updatedUser.Id is null) return BadRequest("Id is null");
-        if (updatedUser.Email is not null && !Regex.IsMatch(updatedUser.Email, EMAIL_RE)) return BadRequest($"{updatedUser.Email} is not a valid email");
+    // Update a user in the databse (for testing)
+    //[HttpPut]
+    //public async Task<IActionResult> Update(User updatedUser)
+    //{
+    //    if (updatedUser.Id is null) return BadRequest("Id is null");
+    //    if (updatedUser.Email is not null && !Regex.IsMatch(updatedUser.Email, EMAIL_RE)) return BadRequest($"{updatedUser.Email} is not a valid email");
 
-        var user = await _usersService.GetAsync(updatedUser.Id);
-        if (user is null) return NotFound();
+    //    var user = await _usersService.GetAsync(updatedUser.Id);
+    //    if (user is null) return NotFound();
 
-        var result = await _usersService.UpdateAsync(updatedUser);
-        if (result is false) return NoContent();
+    //    var result = await _usersService.UpdateAsync(updatedUser);
+    //    if (result is false) return NoContent();
 
-        return CreatedAtAction(nameof(Get), new { id = updatedUser.Id }, updatedUser);
-    }
+    //    return CreatedAtAction(nameof(Get), new { id = updatedUser.Id }, updatedUser);
+    //}
 
+    // Endpoint for deleting a user's account
     [HttpDelete("{id:length(24)}")]
     [Authorize]
     public async Task<IActionResult> Delete(string id) {
@@ -79,6 +84,7 @@ public class UsersController : ControllerBase
         return Ok();
     }
 
+    // Endpoint for grabbing a user's entries
     [HttpGet("entries")]
     [Authorize]
     public async Task<ActionResult<List<Entry>>> GetEntries()
@@ -98,6 +104,7 @@ public class UsersController : ControllerBase
         return Ok(entries);
     }
 
+    // Endpoing for creating an entry for a user
     [HttpPost("entries")]
     [Authorize]
     public async Task<ActionResult> AddEntry(Entry newEntry)
@@ -117,6 +124,7 @@ public class UsersController : ControllerBase
         return NotFound();
     }
 
+    // Endpoint to delete an entry for a user
     [HttpDelete("entries/{date}")]
     [Authorize]
     public async Task<ActionResult> DeleteEntry(DateTime date)
@@ -136,6 +144,7 @@ public class UsersController : ControllerBase
         return NotFound();
     }
 
+    // Endpoint for searching for users by name
     [HttpGet("search")]
     public async Task<ActionResult<List<OtherUserState>>> SearchUsersByName([FromQuery] string query)
     {
@@ -166,6 +175,7 @@ public class UsersController : ControllerBase
         }
     }
 
+    // Endpoint for updating a user's profile information
     [HttpPut("profile")]
     [Authorize]
     public async Task<IActionResult> UpdateUserProfile([FromBody] ProfileInfo profileInfo)
@@ -184,6 +194,7 @@ public class UsersController : ControllerBase
         return NotFound();
     }
 
+    // Endpoint for updating a user's settings
     [HttpPut("settings")]
     [Authorize]
     public async Task<IActionResult> UpdateUserSettings([FromBody] Settings settings)
@@ -202,6 +213,7 @@ public class UsersController : ControllerBase
         return NotFound();
     }
 
+    // Endpoint for refreshing a user's state upon reopening the website
     [HttpGet("refresh")]
     [Authorize]
     public async Task<IActionResult> GetUserState()
@@ -222,6 +234,7 @@ public class UsersController : ControllerBase
         return Ok(userState);
     }
 
+    // Endpoint for following a user
     [HttpPut("follow/{toUserId:length(24)}")]
     [Authorize]
     public async Task<IActionResult> Follow(string toUserId)
@@ -241,6 +254,7 @@ public class UsersController : ControllerBase
         return StatusCode(500);
     }
 
+    // Endpoint for unfollowing a user
     [HttpPut("unfollow/{toUserId:length(24)}")]
     [Authorize]
     public async Task<IActionResult> Unfollow(string toUserId)
@@ -263,7 +277,8 @@ public class UsersController : ControllerBase
         // Else return error
         return StatusCode(500);
     }
-
+    
+    // Endpoint for accepting a follow request
     [HttpPut("accept/{otherId:length(24)}")]
     [Authorize]
     public async Task<IActionResult> AcceptFollowRequest(string otherId)
@@ -283,6 +298,7 @@ public class UsersController : ControllerBase
         return StatusCode(500);
     }
 
+    // Endpoint for declining a follow request
     [HttpPut("decline/{otherId:length(24)}")]
     [Authorize]
     public async Task<IActionResult> DeclineFollowRequest(string otherId)
@@ -304,6 +320,7 @@ public class UsersController : ControllerBase
         return StatusCode(500);
     }
 
+    // Endpoint for taking back a follow request
     [HttpPut("unrequest/{otherId:length(24)}")]
     [Authorize]
     public async Task<IActionResult> Unrequest( string otherId)
@@ -323,6 +340,7 @@ public class UsersController : ControllerBase
         return StatusCode(500);
     }
 
+    // Endpoint for getting a user's feed
     [HttpGet("feed")]
     [Authorize]
     public async Task<IActionResult> Feed()
