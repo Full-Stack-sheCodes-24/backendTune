@@ -71,6 +71,9 @@ public class UsersService
         var updateResult = await _usersCollection.ReplaceOneAsync(
             x => x.Id == id, user);
 
+        // Invalidate cached feed for the user
+        InvalidateCacheFeed(ObjectId.Parse(id));
+
         // Return true if the update was successful, false otherwise
         return updateResult.ModifiedCount > 0;
     }
@@ -88,6 +91,9 @@ public class UsersService
 
         // Perform the update
         var updateResult = await _usersCollection.UpdateOneAsync(filter, update);
+
+        // Invalidate cached feed for the user
+        InvalidateCacheFeed(ObjectId.Parse(id));
 
         // Return true if an entry was deleted, false otherwise
         return updateResult.ModifiedCount > 0;
